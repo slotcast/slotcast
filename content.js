@@ -24,7 +24,7 @@ export const LANDING = `
     <div class="pane">
       <p class="kick">Traditionell offert</p>
       <h3 class="h3">Har ni tid att jämföra?</h3>
-      <p>Då handlar det om pris och därmed om närhet till bygget. Förfrågan går till alla fabriker som tillverkar produkten. Svaren visas med pris levererat, km och transportens CO2, så att närmaste fabrik som klarar kraven syns först.</p>
+      <p>Då handlar det om pris och därmed om närhet till projektet. Förfrågan går till alla fabriker som tillverkar produkten. Svaren visas med pris levererat, km och transportens CO2, så att närmaste fabrik som klarar kraven syns först.</p>
       <button class="btn" data-reg="kopare">Begär offert</button>
     </div>
   </div>
@@ -49,7 +49,7 @@ export const LANDING = `
   <h2 class="h2">Så fungerar det, i två steg</h2>
   <p class="lead2">Som branschen redan arbetar: först ett ungefärligt pris på en grov beskrivning, sedan fast pris på ritningarna. Bara snabbare och till fler fabriker.</p>
   <div class="steps">
-    <div><b>1</b><h3 class="h4">Köparen frågar</h3><p>Produkt med enkel kravställning, mängd i m² eller löpmeter, ungefärligt antal element, byggets adress och leveransveckor.</p></div>
+    <div><b>1</b><h3 class="h4">Köparen frågar</h3><p>Produkt med enkel kravställning, mängd i m² eller löpmeter, ungefärligt antal element, projektets adress och leveransveckor.</p></div>
     <div><b>2</b><h3 class="h4">Fabrikerna svarar</h3><p>Anonymt: kan helt, delvis eller nej, ungefärligt pris, transport och leveransveckor.</p></div>
     <div><b>3</b><h3 class="h4">Köparen väljer</h3><p>Då släpps namn och kontaktuppgifter åt båda håll och ritningarna går till fabriken.</p></div>
     <div><b>4</b><h3 class="h4">Fast offert</h3><p>Fabriken räknar på ritningarna. Affären görs direkt mellan parterna.</p></div>
@@ -60,7 +60,7 @@ export const LANDING = `
   <div class="two">
     <div>
       <h2 class="h2">Det som skiljer fabrikerna åt</h2>
-      <p>Fabriker skiljer sig i när de kan leverera, i kvalitet, i avstånd till bygget och i klimatavtryck. Slotcast visar det som går att mäta i varje svar: leveransveckor, km till bygget och transportens CO2. Kvaliteten bedömer ni som i dag, när ni har valt fabrik och får fast offert.</p>
+      <p>Fabriker skiljer sig i när de kan leverera, i kvalitet, i avstånd till projektet och i klimatavtryck. Slotcast visar det som går att mäta i varje svar: leveransveckor, km till projektet och transportens CO2. Kvaliteten bedömer ni som i dag, när ni har valt fabrik och får fast offert.</p>
       <p>Transporten är en stor del av priset. För en massiv vägg är den ungefär 6 % av priset inom 3 mil och 16 % på 30 mil, så närmaste fabrik som klarar kraven blir ofta billigast.</p>
     </div>
     <div class="nums">
@@ -122,7 +122,7 @@ export const POLICY = `
 <h2>Vilka uppgifter vi samlar in</h2>
 <ul>
 <li>Kontouppgifter: företagets namn, kontaktperson, telefon, e-post, ort, roll och vilka produkter fabriken tillverkar. Lösenordet sparas krypterat och kan inte läsas av oss.</li>
-<li>Uppgifter i tjänsten: förfrågningar (till exempel byggets adress, mängder och leveransveckor), fabrikernas svar och offerter, ledig kapacitet, transporttaxa och om det blev affär.</li>
+<li>Uppgifter i tjänsten: förfrågningar (till exempel projektets adress, mängder och leveransveckor), fabrikernas svar och offerter, ledig kapacitet, transporttaxa och om det blev affär.</li>
 <li>Tekniska uppgifter: inloggningsuppgifter för att hålla dig inloggad samt loggar med IP-adress och tidpunkt, som våra leverantörer sparar för drift och säkerhet.</li>
 </ul>
 
@@ -135,7 +135,7 @@ export const POLICY = `
 </ul>
 
 <h2>Vem som ser uppgifterna</h2>
-<p>Fabriker ser förfrågningar utan köparens namn. Köpare ser svar utan fabrikens namn. När en köpare väljer en fabrik ser båda varandras namn och kontaktuppgifter och fabriken ser byggets adress. Konkurrerande fabriker ser aldrig varandras svar.</p>
+<p>Fabriker ser förfrågningar utan köparens namn. Köpare ser svar utan fabrikens namn. När en köpare väljer en fabrik ser båda varandras namn och kontaktuppgifter och fabriken ser projektets adress. Konkurrerande fabriker ser aldrig varandras svar.</p>
 <p>Vi säljer inga uppgifter. Vi använder följande leverantörer, som behandlar uppgifter för vår räkning enligt personuppgiftsbiträdesavtal:</p>
 <ul>
 <li>Supabase: databas och inloggning. Uppgifterna lagras i Stockholm (EU).</li>
