@@ -4,9 +4,10 @@ export const LANDING = `
 <section class="hero"><div class="wrap hero-in">
   <div class="hero-txt">
     <p class="kick">Marknadsplatsen för betongelement</p>
-    <h1 class="big">Betongelement från en fabrik som kan, nära ert bygge</h1>
-    <p class="lead">Slotcast kopplar ihop byggare som behöver element med prefabfabriker i Sverige, Danmark och Polen. Skicka en grov förfrågan och få ungefärligt pris, leveransveckor, km till bygget och transportens CO2 från fabrikerna. Fast offert kommer när ni har valt fabrik.</p>
-    <p class="free">Alltid gratis för köpare. Gratis för fabriker till augusti 2027.</p>
+    <h1 class="big">Fler fabriker att välja bland, närmare ert projekt</h1>
+    <p class="lead">Få svar från prefabfabriker ni kanske aldrig har anlitat, eller inte har jobbat med på länge. En fabrik närmare projektet betyder lägre transportkostnad och mindre CO2.</p>
+    <p class="lead">Väggar och socklar från närmaste fabrik. Balkonger och trappor från specialister i Sverige, Danmark och Polen. Plattbärlag och håldäck till bästa pris levererat.</p>
+    <p class="free">Alltid gratis för köpare. Har ni en fabrik? Nå köpare ni inte har i dag, gratis till augusti 2027.</p>
   </div>
   <div id="authwrap" class="hero-auth"></div>
 </div></section>
