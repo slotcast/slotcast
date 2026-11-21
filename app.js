@@ -17,8 +17,10 @@ const REGIONS = {
   'Utland (fabriker)': {'Oslo (NO)':[59.91,10.75],'Köpenhamn (DK)':[55.68,12.57],'Helsingfors (FI)':[60.17,24.94],'Tallinn (EE)':[59.44,24.75],'Riga (LV)':[56.95,24.11],'Vilnius (LT)':[54.69,25.28],'Gdańsk (PL)':[54.35,18.65],'Szczecin (PL)':[53.43,14.55]}
 };
 const CITIES = Object.assign({}, ...Object.values(REGIONS));
-const PRODUCTS = ['Sandwichvägg','Massiv vägg','Sockel','Plattbärlag','Håldäck'];
-const MM = {'Sandwichvägg':230,'Massiv vägg':200,'Sockel':150,'Plattbärlag':50,'Håldäck':130};
+const PRODUCTS = ['Sandwichvägg','Massiv vägg','Sockel','Plattbärlag','Håldäck','Balkong','Trappa'];
+const MM = {'Sandwichvägg':230,'Massiv vägg':200,'Sockel':150,'Plattbärlag':50,'Håldäck':130,'Balkong':220};
+const SPECIAL = ['Balkong','Trappa'];
+const STAIR_TON_PER_M = 1.5; // grov vikt per trappa: ton per meter höjd
 const LAYERED = ['Sandwichvägg','Sockel'], WALLS = ['Sandwichvägg','Massiv vägg','Sockel'];
 const ROLES = {fabrik:'Fabrik', kopare:'Köpare', bada:'Fabrik och köpare'};
 const STATUS = {ny:'Ny', verifierad:'Verifierad', avstangd:'Avstängd'};
@@ -36,16 +38,16 @@ const NOW = WEEKS[0];
 const wl = w => w ? 'v' + (w % 100) + ' ' + Math.floor(w / 100) : '–';
 const weekOpts = sel => WEEKS.map(w => `<option value="${w}" ${+sel === w ? 'selected' : ''}>${wl(w)}</option>`).join('');
 const cityOpts = (sel, foreign) => '<option value="">Välj ort</option>' + Object.entries(REGIONS).filter(([r]) => foreign || !r.startsWith('Utland')).map(([r, cs]) => `<optgroup label="${esc(r)}">${Object.keys(cs).map(c => `<option ${c === sel ? 'selected' : ''}>${esc(c)}</option>`).join('')}</optgroup>`).join('');
-const U = l => l.unit === 'lm' ? 'lm' : 'm²';
+const U = l => l.unit === 'lm' ? 'lm' : l.unit === 'st' ? 'st' : 'm²';
 const hM = l => l.height_mm ? l.height_mm / 1000 : 0;
 const area = (l, q) => l.unit === 'lm' ? q * hM(l) : q;
-const tons = (l, q) => { const a = area(l, q), arm = +l.arm || 0; const mm = LAYERED.includes(l.product) ? ((+l.t1||0) + (+l.t3||0)) || MM[l.product] : (+l.concrete_mm || MM[l.product] || 200); return a * mm / 1000 * (arm ? 2.3 : 2.4) + a * arm / 1000; };
+const tons = (l, q) => { if (l.product === 'Trappa') return q * hM(l) * STAIR_TON_PER_M; const a = area(l, q), arm = +l.arm || 0; const mm = LAYERED.includes(l.product) ? ((+l.t1||0) + (+l.t3||0)) || MM[l.product] : (+l.concrete_mm || MM[l.product] || 200); return a * mm / 1000 * (arm ? 2.3 : 2.4) + a * arm / 1000; };
 const perTon = (o, d) => { const a = +o.t30 || 120, b = +o.t300 || 342; return d <= 30 ? a : a + (d - 30) * (b - a) / 270; };
 function transport(org, l, q, city) { const d = km(CITIES[org.city], CITIES[city]); if (d == null) return null; const t = tons(l, q); return { km: d, ton: t, kr: Math.round(t * perTon(org, d) / 100) * 100 }; }
 const isFactory = o => o && (o.role === 'fabrik' || o.role === 'bada');
 const isBuyer = o => o && (o.role === 'kopare' || o.role === 'bada');
 const lineText = l => `${esc(l.product)}${l.spec ? ' · ' + esc(l.spec) : ''}, cirka ${fmt(l.qty)} ${U(l)}`;
-const lineSub = l => `Cirka ${fmt(l.elements)} element${l.height_mm ? ' · elementhöjd ' + fmt(l.height_mm) + ' mm' : ''}${l.arm ? ' · armering ' + (+l.arm).toLocaleString('sv-SE') + ' kg/m²' : ''} · cirka ${fmt(tons(l, l.qty))} ton`;
+const lineSub = l => l.product === 'Trappa' ? `${fmt(l.elements)} trappor · höjd ${fmt(l.height_mm)} mm per trappa · cirka ${fmt(tons(l, l.qty))} ton` : l.product === 'Balkong' ? `${fmt(l.elements)} balkonger · cirka ${fmt(tons(l, l.qty))} ton` : `Cirka ${fmt(l.elements)} element${l.height_mm ? ' · elementhöjd ' + fmt(l.height_mm) + ' mm' : ''}${l.arm ? ' · armering ' + (+l.arm).toLocaleString('sv-SE') + ' kg/m²' : ''} · cirka ${fmt(tons(l, l.qty))} ton`;
 const isStale = (a, edited) => !!(a && edited && new Date(a.updated_at) < new Date(edited));
 const errText = e => { const m = e?.message || String(e); if (/Invalid login/i.test(m)) return 'Fel e-post eller lösenord.'; if (/Email not confirmed/i.test(m)) return 'Bekräfta din e-post först. Kolla inkorgen och skräpposten.'; if (/already registered/i.test(m)) return 'Det finns redan ett konto med den e-postadressen.'; if (/Password should be/i.test(m)) return 'Lösenordet måste vara minst 8 tecken.'; return m; };
 
@@ -245,14 +247,16 @@ async function vNew(el) {
   <div id="nerr" class="err"></div><p><button class="btn" id="send">Skicka förfrågan</button></p></div>`;
   const lines = $('lines');
   const hint = async () => { const w1 = +val('w1'), w2 = +val('w2'); for (const d of lines.querySelectorAll('.ln')) { const p = d.querySelector('.lp').value; const { data } = await sb.rpc('capacity_summary', { p, w1, w2 }); const r = data?.[0] || { factories: 0, with_capacity: 0 }; const h = d.querySelector('.hint'); h.className = 'hint' + (r.with_capacity ? '' : ' no'); h.textContent = r.factories ? `${r.factories} fabrik(er) tillverkar ${p.toLowerCase()}; ${r.with_capacity} har lagt in ledig kapacitet under perioden.` : `Ingen fabrik i Slotcast tillverkar ${p.toLowerCase()} ännu.`; } };
-  const kb = p => LAYERED.includes(p) ? `<div class="row"><div><label>Innerskiva (mm)</label><input class="l1" type="number" min="1"></div><div><label>Isolering (mm)</label><input class="l2" type="number" min="0"></div><div><label>Ytterskiva (mm)</label><input class="l3" type="number" min="1"></div></div>` : `<label>Kravställning (mm)</label><input class="lk" placeholder="t.ex. 200">`;
+  const kb = p => p === 'Balkong' ? `<div class="row"><div><label>Yta per balkong (m²)</label><input class="lba" type="number" min="0.5" step="0.1"></div><div><label>Antal balkonger</label><input class="lbn" type="number" min="1"></div><div><label>Plattjocklek (mm), för vikt</label><input class="lbt" type="number" min="50" value="220"></div></div>`
+    : p === 'Trappa' ? `<div class="row"><div><label>Antal trappor</label><input class="ltn" type="number" min="1"></div><div><label>Höjd per trappa (mm)</label><input class="lth" type="number" min="500" step="10" placeholder="t.ex. 2800"></div><div><label>Kravställning (valfri)</label><input class="lk" placeholder="t.ex. rak, 1 200 mm bred"></div></div>`
+    : LAYERED.includes(p) ? `<div class="row"><div><label>Innerskiva (mm)</label><input class="l1" type="number" min="1"></div><div><label>Isolering (mm)</label><input class="l2" type="number" min="0"></div><div><label>Ytterskiva (mm)</label><input class="l3" type="number" min="1"></div></div>` : `<label>Kravställning (mm)</label><input class="lk" placeholder="t.ex. 200">`;
   const add = () => {
     const d = document.createElement('div'); d.className = 'ln line'; const p0 = PRODUCTS[0];
     d.innerHTML = `<div class="row"><div style="flex:0 1 220px"><label>Produkt</label><select class="lp">${PRODUCTS.map(x => `<option>${esc(x)}</option>`).join('')}</select></div><div class="kb" style="flex:1 1 360px">${kb(p0)}</div></div>
-    <div class="row" style="margin-top:8px"><div style="flex:0 1 110px"><label>Enhet</label><select class="lu"><option value="m2">m²</option><option value="lm">lm</option></select></div><div><label>Mängd</label><input class="lm" type="number" min="1"></div><div><label>Elementhöjd (mm) <span class="sub lhr">valfri</span></label><input class="lh" type="number" min="100" step="10"></div><div><label>Antal element, cirka</label><input class="le" type="number" min="1"></div><div class="ltw"><label>Betong (mm), för vikt</label><input class="lt" type="number" min="20" value="${MM[p0]}"></div><div class="law"><label>Armering per kvm (kg)</label><input class="la" type="number" min="0" step="0.5"></div></div>
+    <div class="row r2" style="margin-top:8px"><div style="flex:0 1 110px"><label>Enhet</label><select class="lu"><option value="m2">m²</option><option value="lm">lm</option></select></div><div><label>Mängd</label><input class="lm" type="number" min="1"></div><div><label>Elementhöjd (mm) <span class="sub lhr">valfri</span></label><input class="lh" type="number" min="100" step="10"></div><div><label>Antal element, cirka</label><input class="le" type="number" min="1"></div><div class="ltw"><label>Betong (mm), för vikt</label><input class="lt" type="number" min="20" value="${MM[p0]}"></div><div class="law"><label>Armering per kvm (kg)</label><input class="la" type="number" min="0" step="0.5"></div></div>
     <div class="hint"></div>${lines.children.length ? '<button class="lnk rm">Ta bort raden</button>' : ''}`;
     lines.appendChild(d);
-    const tog = p => { d.querySelector('.ltw').style.display = LAYERED.includes(p) ? 'none' : ''; d.querySelector('.law').style.display = WALLS.includes(p) ? '' : 'none'; }; tog(p0);
+    const tog = p => { d.querySelector('.r2').style.display = SPECIAL.includes(p) ? 'none' : ''; d.querySelector('.ltw').style.display = LAYERED.includes(p) ? 'none' : ''; d.querySelector('.law').style.display = WALLS.includes(p) ? '' : 'none'; }; tog(p0);
     d.querySelector('.lu').onchange = e => { d.querySelector('.lhr').textContent = e.target.value === 'lm' ? 'krävs vid lm' : 'valfri'; };
     d.querySelector('.lp').onchange = e => { const p = e.target.value; d.querySelector('.kb').innerHTML = kb(p); d.querySelector('.lt').value = MM[p]; tog(p); hint(); };
     d.querySelector('.rm')?.addEventListener('click', () => { d.remove(); });
@@ -262,12 +266,15 @@ async function vNew(el) {
   $('send').onclick = async () => {
     const e = $('nerr'); e.textContent = '';
     const out = [...lines.querySelectorAll('.ln')].map(d => { const q = c => d.querySelector(c); const p = q('.lp').value; const n = { product: p, unit: q('.lu').value, qty: +q('.lm').value, height_mm: +q('.lh').value || null, elements: +q('.le').value || null, arm: WALLS.includes(p) ? (+String(q('.la').value).replace(',', '.') || null) : null };
+      if (p === 'Balkong') { const a = +String(q('.lba').value).replace(',', '.') || 0, c = +q('.lbn').value || 0; Object.assign(n, { unit: 'm2', qty: Math.round(a * c * 10) / 10, elements: c || null, height_mm: null, arm: null, concrete_mm: +q('.lbt').value || MM[p], spec: a ? a.toLocaleString('sv-SE') + ' m² per balkong' : null }); return n; }
+      if (p === 'Trappa') { const c = +q('.ltn').value || 0; Object.assign(n, { unit: 'st', qty: c, elements: c || null, height_mm: +q('.lth').value || null, arm: null, spec: q('.lk').value.trim() || null }); return n; }
       if (LAYERED.includes(p)) { n.t1 = +q('.l1').value || null; n.t2 = +q('.l2').value || null; n.t3 = +q('.l3').value || null; n.spec = `${n.t1 || 0} + ${n.t2 || 0} + ${n.t3 || 0} mm`; }
       else { n.spec = q('.lk').value.trim() || null; if (n.spec && /^[\d\s+,.]+$/.test(n.spec)) n.spec += ' mm'; n.concrete_mm = +q('.lt').value || MM[p]; }
       return n; });
     if (!out.length) { e.textContent = 'Lägg till minst en produktrad.'; return; }
-    if (out.some(l => !(l.qty > 0) || !(l.elements > 0))) { e.textContent = 'Ange mängd och ungefärligt antal element på varje rad.'; return; }
+    if (out.some(l => !(l.qty > 0) || !(l.elements > 0))) { e.textContent = 'Ange mängd och antal på varje rad (yta och antal för balkonger, antal för trappor).'; return; }
     if (out.some(l => LAYERED.includes(l.product) && !(l.t1 > 0 && l.t3 > 0))) { e.textContent = 'Ange innerskiva och ytterskiva i mm på sandwich- och sockelrader.'; return; }
+    if (out.some(l => l.product === 'Trappa' && !(l.height_mm > 0))) { e.textContent = 'Ange höjd per trappa i mm.'; return; }
     if (out.some(l => l.unit === 'lm' && !(l.height_mm > 0))) { e.textContent = 'Ange elementhöjd på rader där mängden är i lm.'; return; }
     if (!val('dc')) { e.textContent = 'Välj närmaste ort i listan.'; return; }
     if (+val('w2') < +val('w1')) { e.textContent = 'Sista leveransveckan kan inte vara före första leveransen.'; return; }

@@ -12,3 +12,6 @@ as $function$
   where p = any(o.products) and o.role in ('fabrik','bada') and o.status <> 'avstangd'
     and o.id <> coalesce(app.my_org(), '00000000-0000-0000-0000-000000000000'::uuid)
 $function$;
+
+-- Trappor räknas i styck.
+alter type public.qty_unit add value if not exists 'st';
