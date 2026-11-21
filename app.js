@@ -1,5 +1,6 @@
 import { createClient } from './supabase.js';
 import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
+import { LANDING, POLICY } from './content.js';
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -70,13 +71,27 @@ async function loadMe() {
 }
 
 function vAuth() {
-  $('nav').innerHTML = ''; $('who').innerHTML = '';
+  $('nav').innerHTML = '';
+  $('who').innerHTML = '<button id="hlogin">Logga in</button>';
+  $('hlogin').onclick = () => openAuth('login');
+  app.classList.add('full');
+  app.innerHTML = LANDING;
+  app.querySelectorAll('[data-reg]').forEach(b => b.onclick = () => openAuth('reg', b.dataset.reg));
+  authCard();
+}
+
+function openAuth(tab, role) {
+  S.authTab = tab; if (role) S.regRole = role;
+  if (!$('authwrap')) { location.hash = ''; render(); }
+  authCard();
+  $('authwrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function authCard() {
+  const w = $('authwrap'); if (!w) return;
   const t = S.authTab;
-  app.innerHTML = `<div class="narrow"><div class="card">
-  <div class="tabs"><button data-t="login" class="${t==='login'?'on':''}">Logga in</button><button data-t="reg" class="${t==='reg'?'on':''}">Registrera företag</button></div>
-  <div id="authbox"></div></div>
-  <p class="sub" style="text-align:center">Slotcast matchar ledig kapacitet hos prefabfabriker med byggare som behöver element.</p></div>`;
-  app.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { S.authTab = b.dataset.t; vAuth(); });
+  w.innerHTML = `<div class="card" style="margin:0"><div class="tabs"><button data-t="login" class="${t==='login'?'on':''}">Logga in</button><button data-t="reg" class="${t==='reg'?'on':''}">Registrera företag</button></div><div id="authbox"></div></div>`;
+  w.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { S.authTab = b.dataset.t; authCard(); });
   const box = $('authbox');
   if (t === 'login') {
     box.innerHTML = `<label for="le">E-post</label><input id="le" type="email" autocomplete="email">
@@ -87,15 +102,15 @@ function vAuth() {
     $('lp').onkeydown = e => { if (e.key === 'Enter') $('lgo').click(); };
     $('forgot').onclick = async () => { const e = val('le'); if (!e) { $('lerr').textContent = 'Skriv din e-post först, så skickar vi en länk.'; return; } const { error } = await sb.auth.resetPasswordForEmail(e, { redirectTo: location.origin + location.pathname }); $('lerr').className = error ? 'err' : 'ok'; $('lerr').textContent = error ? errText(error) : 'Om adressen finns skickar vi en länk för att välja nytt lösenord.'; };
   } else {
-    box.innerHTML = `<label>Roll</label><div>${Object.entries(ROLES).map(([k, v]) => `<label class="chk"><input type="radio" name="rr" value="${k}" ${k==='kopare'?'checked':''}>${v}</label>`).join('')}</div>
+    box.innerHTML = `<label>Roll</label><div>${Object.entries(ROLES).map(([k, v]) => `<label class="chk"><input type="radio" name="rr" value="${k}" ${k===(S.regRole||'kopare')?'checked':''}>${v}</label>`).join('')}</div>
     <div class="row" style="margin-top:8px"><div><label for="rc">Företag</label><input id="rc" autocomplete="organization"></div><div><label for="rn">Kontaktperson</label><input id="rn" autocomplete="name"></div></div>
     <div class="row" style="margin-top:8px"><div><label for="rph">Telefon</label><input id="rph" autocomplete="tel"></div><div><label for="rcy">Ort <span class="sub" id="rcyl">(valfri)</span></label><select id="rcy">${cityOpts('', true)}</select></div></div>
     <div id="rprod" style="margin-top:8px;display:none"><label>Produkter ni tillverkar</label>${PRODUCTS.map(x => `<label class="chk"><input type="checkbox" class="rp" value="${esc(x)}">${esc(x)}</label>`).join('')}</div>
     <div class="row" style="margin-top:8px"><div><label for="re">E-post</label><input id="re" type="email" autocomplete="email"></div><div><label for="rpw">Lösenord (minst 8 tecken)</label><input id="rpw" type="password" autocomplete="new-password"></div></div>
-    <label class="chk" style="margin-top:10px"><input type="checkbox" id="rterms">Jag godkänner att uppgifterna sparas för att använda Slotcast.</label>
+    <label class="chk" style="margin-top:10px"><input type="checkbox" id="rterms">Jag godkänner att uppgifterna sparas för att använda Slotcast enligt <a href="#integritet" target="_blank" rel="noopener">integritetspolicyn</a>.</label>
     <div id="rerr" class="err"></div><p><button class="btn" id="rgo">Registrera</button></p>`;
     const tog = () => { const r = box.querySelector('input[name=rr]:checked').value; const f = r !== 'kopare'; $('rprod').style.display = f ? '' : 'none'; $('rcyl').textContent = f ? '(fabrikens ort, för avstånd)' : '(valfri)'; };
-    box.querySelectorAll('input[name=rr]').forEach(r => r.onchange = tog);
+    box.querySelectorAll('input[name=rr]').forEach(r => r.onchange = tog); tog();
     $('rgo').onclick = async () => {
       const e = $('rerr'); e.className = 'err'; e.textContent = '';
       const role = box.querySelector('input[name=rr]:checked').value;
@@ -113,6 +128,11 @@ function vAuth() {
       if (!data.session) { e.className = 'ok'; e.textContent = 'Klart. Vi har skickat ett mejl till ' + val('re') + '. Klicka på länken i mejlet för att bekräfta adressen och logga sedan in.'; }
     };
   }
+}
+
+function vPolicy() {
+  if (!S.session) { $('nav').innerHTML = ''; $('who').innerHTML = ''; }
+  app.innerHTML = POLICY; window.scrollTo(0, 0);
 }
 
 function vRecovery() {
@@ -134,7 +154,12 @@ function views() {
 }
 function go(v) { S.view = v; S.flash = ''; location.hash = v; render(); }
 
+window.addEventListener('hashchange', () => { if (location.hash === '#integritet' || S.policy) render(); });
+
 function render() {
+  app.classList.remove('full');
+  S.policy = location.hash === '#integritet';
+  if (S.policy) return vPolicy();
   if (S.recovery) return vRecovery();
   if (!S.session) return vAuth();
   if (!S.profile || !S.org) { app.innerHTML = '<div class="card">Kontot saknar företagsprofil. Kontakta Slotcast.</div>'; return; }
@@ -189,17 +214,16 @@ async function vCap(el) {
   if (error) throw error;
   const prods = S.org.products || [];
   el.innerHTML = `<h1>Ledig kapacitet</h1>
-  <div class="card"><p class="sub" style="margin-top:0">Lägg in veckor där ni har plats i produktionen. Köpare ser att det finns ledig kapacitet, men inte vilken fabrik det gäller.</p>
-  <div class="row"><div><label for="sp">Produkt</label><select id="sp">${prods.map(p => `<option>${esc(p)}</option>`).join('')}</select></div>
-  <div><label for="sf">Från vecka</label><select id="sf">${weekOpts(WEEKS[4])}</select></div><div><label for="st">Till vecka</label><select id="st">${weekOpts(WEEKS[8])}</select></div>
+  <div class="card"><p class="sub" style="margin-top:0">Lägg in perioder där ni har plats i produktionen, i m² per vecka. Vilken produkt det blir avgör köparens förfrågan, bland de produkter ni tillverkar${prods.length ? ' (' + esc(prods.join(', ').toLowerCase()) + ')' : ''}. Köpare ser att det finns ledig kapacitet, men inte vilken fabrik det gäller.</p>
+  <div class="row"><div><label for="sf">Från vecka</label><select id="sf">${weekOpts(WEEKS[4])}</select></div><div><label for="st">Till vecka</label><select id="st">${weekOpts(WEEKS[8])}</select></div>
   <div><label for="sm">m² per vecka</label><input id="sm" type="number" min="1"></div></div>
-  <div style="margin-top:10px"><label for="sn">Kommentar (valfri)</label><input id="sn" placeholder="t.ex. bara 300 mm håldäck"></div>
-  <div id="serr" class="err"></div><p><button class="btn" id="sadd" ${prods.length ? '' : 'disabled'}>Lägg till</button></p></div>
-  <div class="card"><h2>Inlagd kapacitet</h2>${slots.length ? `<div class="scroll"><table><thead><tr><th>Produkt</th><th>Veckor</th><th class="num">m²/vecka</th><th>Kommentar</th><th></th></tr></thead><tbody>
-  ${slots.map(s => `<tr${s.to_week < NOW ? ' style="opacity:.5"' : ''}><td>${esc(s.product)}</td><td>${wl(s.from_week)}–${wl(s.to_week)}${s.to_week < NOW ? ' <span class="tag">passerad</span>' : ''}</td><td class="num">${fmt(s.m2_per_week)}</td><td>${esc(s.note)}</td><td><button class="lnk" data-del="${s.id}">Ta bort</button></td></tr>`).join('')}
+  <div style="margin-top:10px"><label for="sn">Kommentar (valfri)</label><input id="sn" placeholder="t.ex. bara socklar upp till 1,6 m"></div>
+  <div id="serr" class="err"></div><p><button class="btn" id="sadd">Lägg till</button></p></div>
+  <div class="card"><h2>Inlagd kapacitet</h2>${slots.length ? `<div class="scroll"><table><thead><tr><th>Veckor</th><th class="num">m²/vecka</th><th>Kommentar</th><th></th></tr></thead><tbody>
+  ${slots.map(s => `<tr${s.to_week < NOW ? ' style="opacity:.5"' : ''}><td>${wl(s.from_week)}–${wl(s.to_week)}${s.to_week < NOW ? ' <span class="tag">passerad</span>' : ''}</td><td class="num">${fmt(s.m2_per_week)}</td><td>${esc(s.note)}</td><td><button class="lnk" data-del="${s.id}">Ta bort</button></td></tr>`).join('')}
   </tbody></table></div>` : '<p class="sub">Ingen kapacitet inlagd än.</p>'}</div>`;
   $('sadd').onclick = async () => {
-    const d = { org_id: S.org.id, product: val('sp'), from_week: +val('sf'), to_week: +val('st'), m2_per_week: +val('sm'), note: val('sn') || null };
+    const d = { org_id: S.org.id, product: null, from_week: +val('sf'), to_week: +val('st'), m2_per_week: +val('sm'), note: val('sn') || null };
     if (d.to_week < d.from_week) { $('serr').textContent = 'Till-veckan kan inte vara före från-veckan.'; return; }
     if (!(d.m2_per_week > 0)) { $('serr').textContent = 'Ange hur många m² per vecka ni har ledigt.'; return; }
     const { error } = await sb.from('slots').insert(d);
