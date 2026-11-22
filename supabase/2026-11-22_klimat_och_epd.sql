@@ -44,3 +44,13 @@ as $function$
 $function$;
 revoke all on function public.factory_inbox() from public;
 grant execute on function public.factory_inbox() to authenticated;
+
+-- Ändrat klimatkrav markerar förfrågan som uppdaterad, så att fabrikerna kontrollerar sina svar.
+create or replace function public.touch_request() returns trigger language plpgsql set search_path to '' as $$
+begin
+  if (new.city, new.first_week, new.last_week, new.all_from_one, new.drawings, new.addr, new.min_climate_level, new.epd_required)
+     is distinct from (old.city, old.first_week, old.last_week, old.all_from_one, old.drawings, old.addr, old.min_climate_level, old.epd_required)
+  then new.edited_at := now(); end if;
+  if new.buyer_org_id is distinct from old.buyer_org_id and not app.is_admin() then raise exception 'Fältet kan inte ändras'; end if;
+  return new;
+end $$;
