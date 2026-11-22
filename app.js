@@ -24,6 +24,23 @@ const STAIRS_PER_LOAD = 5, LOAD_TON = 20; // trappor tar plats snarare än vikt:
 const LAYERED = ['Sandwichvägg','Sockel'], WALLS = ['Sandwichvägg','Massiv vägg','Sockel'];
 const ROLES = {fabrik:'Fabrik', kopare:'Köpare', bada:'Fabrik och köpare'};
 const STATUS = {ny:'Ny', verifierad:'Verifierad', avstangd:'Avstängd'};
+// Klimat: Svensk Betongs nivåer för klimatförbättrad betong (nivå 1–4 = 10–40 % under branschreferensen, nivå 5 = halverad)
+const LVL = [['', 'Ej angivet'], ['0', 'Typvärde, ingen klimatförbättring'], ['1', 'Nivå 1 (−10 %)'], ['2', 'Nivå 2 (−20 %)'], ['3', 'Nivå 3 (−30 %)'], ['4', 'Nivå 4 (−40 %)'], ['5', 'Nivå 5 (−50 %)']];
+const lvlOpts = sel => LVL.map(([v, t]) => `<option value="${v}" ${String(sel ?? '') === v ? 'selected' : ''}>${t}</option>`).join('');
+const lvlTxt = v => v === '' || v == null ? 'Ej angivet' : (+v ? 'Nivå ' + v : 'Typvärde');
+const reqOpts = sel => [['0', 'Inget krav'], ['1', 'Nivå 1 eller bättre'], ['2', 'Nivå 2 eller bättre'], ['3', 'Nivå 3 eller bättre'], ['4', 'Nivå 4 eller bättre'], ['5', 'Nivå 5']].map(([v, t]) => `<option value="${v}" ${String(+sel || 0) === v ? 'selected' : ''}>${t}</option>`).join('');
+const GWPU = { ton: 'per ton', m3: 'per m³', m2: 'per m²' };
+// Boverkets generiska värden per produkt (kg CO2e per ton, A1–A3, konservativa). Läggs in när värdena är hämtade.
+const GEN = {};
+const concMm = l => LAYERED.includes(l.product) ? ((+l.t1 || 0) + (+l.t3 || 0)) || MM[l.product] : (+l.concrete_mm || MM[l.product] || 200);
+// Elementens CO2 i ton för en mängd q, ur svarets EPD-värde eller Boverkets generiska värde
+function elCO2(a, l, q) {
+  const v = +a.gwp_value, u = a.gwp_unit;
+  let kg = null, src = 'generiskt';
+  if (v > 0) { src = 'EPD'; kg = u === 'ton' ? v * tons(l, q) : l.product === 'Trappa' ? null : u === 'm3' ? v * area(l, q) * concMm(l) / 1000 : v * area(l, q); }
+  else if (GEN[l.product]) kg = GEN[l.product] * tons(l, q);
+  return { t: kg == null ? null : Math.round(kg / 100) / 10, src };
+}
 
 // ---------- Hjälpare ----------
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -44,7 +61,7 @@ const area = (l, q) => l.unit === 'lm' ? q * hM(l) : q;
 const tons = (l, q) => { if (l.product === 'Trappa') return Math.ceil(q / STAIRS_PER_LOAD) * LOAD_TON; const a = area(l, q), arm = +l.arm || 0; const mm = LAYERED.includes(l.product) ? ((+l.t1||0) + (+l.t3||0)) || MM[l.product] : (+l.concrete_mm || MM[l.product] || 200); return a * mm / 1000 * (arm ? 2.3 : 2.4) + a * arm / 1000; };
 const perTon = (o, d) => { const a = +o.t30 || 120, b = +o.t300 || 342; return d <= 30 ? a : a + (d - 30) * (b - a) / 270; };
 function transport(org, l, q, city) { const d = km(CITIES[org.city], CITIES[city]); if (d == null) return null; const t = tons(l, q); return { km: d, ton: t, kr: Math.round(t * perTon(org, d) / 100) * 100 }; }
-const trInfo = (o, l, t) => l.product === 'Trappa' ? `Förslag: ${fmt(t.ton / LOAD_TON)} lass à cirka ${STAIRS_PER_LOAD} trappor, ${fmt(LOAD_TON * perTon(o, t.km))} kr per lass (${fmt(t.km)} km)` : `Förslag: ${fmt(t.ton)} ton × ${fmt(perTon(o, t.km))} kr/ton (${fmt(t.km)} km)`;
+const trInfo = (o, l, t) => (l.product === 'Trappa' ? `Grått exempel: ${fmt(t.ton / LOAD_TON)} lass à cirka ${STAIRS_PER_LOAD} trappor, ${fmt(LOAD_TON * perTon({}, t.km))} kr per lass (${fmt(t.km)} km)` : `Grått exempel: ${fmt(t.ton)} ton × ${fmt(perTon({}, t.km))} kr/ton (${fmt(t.km)} km)`) + ', Prebetongs taxa 2020. Över sex år gammal, så ange er egen kostnad.';
 const upd = r => [r.edited_at, ...(r.request_lines || []).filter(l => !l.removed).map(l => l.edited_at)].filter(Boolean).sort().pop() || null;
 const isFactory = o => o && (o.role === 'fabrik' || o.role === 'bada');
 const isBuyer = o => o && (o.role === 'kopare' || o.role === 'bada');
@@ -193,15 +210,21 @@ async function vProfile(el) {
   <div class="row" style="margin-top:10px"><div><label for="ph">Telefon</label><input id="ph" value="${esc(o.phone)}"></div><div><label for="em">E-post för kontakt</label><input id="em" type="email" value="${esc(o.email)}"></div><div><label for="cy">Ort</label><select id="cy">${cityOpts(o.city, true)}</select></div></div>
   <div id="fx2" class="line"><h3>Fabrik</h3><label style="margin-top:8px">Produkter ni tillverkar</label>
   <div>${PRODUCTS.map(x => `<label class="chk"><input type="checkbox" class="pr" value="${esc(x)}" ${(o.products || []).includes(x) ? 'checked' : ''}>${esc(x)}</label>`).join('')}</div>
-  <p class="sub" style="margin:10px 0 6px">Transporttaxa som förslag i era svar. Förifyllt med Prebetongs taxa 2020; ni kan ändra transportbeloppet i varje svar.</p>
-  <div class="row"><div><label for="t30">kr per ton, upp till 30 km</label><input id="t30" type="number" min="0" value="${esc(o.t30)}"></div><div><label for="t300">kr per ton, vid 300 km</label><input id="t300" type="number" min="0" value="${esc(o.t300)}"></div></div></div>
+  <h3 style="margin-top:16px">Klimat</h3>
+  <p class="sub" style="margin:4px 0 8px">Visa era miljöinvesteringar. Klimatnivå, EPD och elementens CO2 syns för alla köpare i varje svar, och vid samma pris vinner fabriken med lägst klimatpåverkan. Ta klimatpåverkan för tillverkningen (A1–A3, raden GWP-GHG, annars GWP-total) ur er EPD. Nivåerna följer Svensk Betongs vägledning för klimatförbättrad betong. Utan EPD används Boverkets generiska värde, som ligger cirka 25 % över medel.</p>
+  <div class="scroll"><table><thead><tr><th>Produkt</th><th>Klimatnivå</th><th>Klimatpåverkan A1–A3, kg CO2e</th><th>Enhet</th><th>EPD-registreringsnummer</th><th>Länk till EPD</th></tr></thead><tbody>
+  ${PRODUCTS.map(x => { const g = (o.climate || {})[x] || {}; return `<tr class="gw" data-p="${esc(x)}"><td>${esc(x)}</td><td><select class="cl">${lvlOpts(g.lvl)}</select></td><td><input class="gv" type="number" min="0" step="0.1" value="${esc(g.v ?? '')}" placeholder="t.ex. 250"></td><td><select class="gu" style="min-width:110px">${Object.entries(GWPU).map(([k, t]) => `<option value="${k}" ${(g.u || 'ton') === k ? 'selected' : ''}>${t}</option>`).join('')}</select></td><td><input class="gr" value="${esc(g.reg || '')}" placeholder="t.ex. EPD-IES-0012345"></td><td><input class="gl" value="${esc(g.link || '')}" placeholder="https://"></td></tr>`; }).join('')}
+  </tbody></table></div>
+  <p class="sub" style="margin:6px 0 0">Fyll i för de produkter ni tillverkar. Länken visas för köparen när ni har valts.</p>
+  <div style="display:none"><input id="t30" type="number" value="${esc(o.t30)}"><input id="t300" type="number" value="${esc(o.t300)}"></div></div>
   <div id="perr" class="err"></div><p><button class="btn" id="psave">Spara profil</button></p></div>
   <div class="card"><h3>Lösenord</h3><div class="row" style="margin-top:8px"><div><label for="np2">Nytt lösenord</label><input id="np2" type="password" autocomplete="new-password"></div></div><div id="pwerr" class="err"></div><p><button class="btn2" id="pwsave">Byt lösenord</button></p></div>`;
   const tog = () => { const r = el.querySelector('input[name=role]:checked').value; $('fx2').style.display = r !== 'kopare' ? '' : 'none'; };
   el.querySelectorAll('input[name=role]').forEach(r => r.onchange = tog); tog();
   $('psave').onclick = async () => {
     const role = el.querySelector('input[name=role]:checked').value, products = [...el.querySelectorAll('.pr:checked')].map(x => x.value), e = $('perr');
-    const d = { role, name: val('co'), contact_name: val('ct'), phone: val('ph'), email: val('em'), city: val('cy') || null, products, t30: +val('t30') || 120, t300: +val('t300') || 342 };
+    const climate = {}; el.querySelectorAll('.gw').forEach(r => { const q = c => r.querySelector(c); const v = +String(q('.gv').value).replace(',', '.'); const g = { lvl: q('.cl').value, v: v > 0 ? v : null, u: q('.gu').value, reg: q('.gr').value.trim(), link: q('.gl').value.trim() }; if (g.lvl !== '' || g.v || g.reg || g.link) climate[r.dataset.p] = g; });
+    const d = { role, name: val('co'), contact_name: val('ct'), phone: val('ph'), email: val('em'), city: val('cy') || null, products, t30: +val('t30') || 120, t300: +val('t300') || 342, climate };
     if (!d.name) { e.textContent = 'Skriv företagets namn.'; return; }
     if (role !== 'kopare' && !d.city) { e.textContent = 'Välj fabrikens ort.'; return; }
     if (role !== 'kopare' && !products.length) { e.textContent = 'Kryssa i minst en produkt.'; return; }
@@ -241,12 +264,13 @@ async function vCap(el) {
 async function vNew(el) {
   const R0 = S.editReq || null;
   el.innerHTML = `<h1>${R0 ? 'Ändra förfrågan' : 'Ny förfrågan'}</h1><div class="card">${R0 ? '<div class="note">Fabriker som redan har svarat ser att förfrågan är uppdaterad och ombeds kontrollera sitt svar. Rader där ni har valt fabrik är låsta.</div>' : ''}
-  <p class="sub" style="margin-top:0">En grov uppskattning räcker. Förfrågan går anonymt till fabriker som tillverkar produkterna. De svarar med ungefärligt pris, leveransveckor och transport. När ni valt fabrik ser ni varandras namn och fabriken lämnar fast offert.</p>
+  <p class="sub" style="margin-top:0">En grov uppskattning räcker. Förfrågan går anonymt till fabriker som tillverkar produkterna. De svarar med ungefärligt pris, leveransveckor, transport och klimatnivå. När ni valt fabrik ser ni varandras namn och fabriken lämnar fast offert.</p>
   <div id="lines"></div><button class="lnk" id="addl">+ Lägg till produktrad</button>
   <div class="row" style="margin-top:12px"><div><label for="addr">Projektets adress</label><input id="addr" placeholder="Gata, ort"></div><div><label for="dc">Närmaste ort i listan (för avstånd)</label><select id="dc">${cityOpts(S.org.city && CITIES[S.org.city] && !S.org.city.includes('(') ? S.org.city : '', false)}</select></div></div>
   <div class="row" style="margin-top:12px"><div><label for="w1">Första leverans</label><select id="w1">${weekOpts(WEEKS[8])}</select></div><div><label for="w2">Sista leveransvecka</label><select id="w2">${weekOpts(WEEKS[10])}</select></div>
   <div><label for="all">Leverantörer</label><select id="all"><option value="1">Allt från en fabrik</option><option value="0">Delar ok</option></select></div>
   <div><label for="draw">Tillverkningsritningar</label><select id="draw"><option>Finns</option><option>Tas fram av oss</option><option>Ska tas fram av fabriken</option></select></div></div>
+  <div class="row" style="margin-top:12px"><div><label for="clim">Klimatkrav (valfritt)</label><select id="clim">${reqOpts(R0?.min_climate_level)}</select></div><div><label for="epdr">EPD</label><select id="epdr"><option value="">Krävs inte</option><option value="1" ${R0?.epd_required ? 'selected' : ''}>Krävs</option></select></div><div style="flex:2 1 320px"><p class="sub" style="margin:22px 0 0">Klimatnivå, EPD och CO2 visas för alla svar ändå. Med krav hamnar svar som inte når det under de som uppfyller kraven.</p></div></div>
   <div id="nerr" class="err"></div><p><button class="btn" id="send">${R0 ? 'Spara ändringar' : 'Skicka förfrågan'}</button>${R0 ? ' <button class="lnk" id="cancel">Avbryt</button>' : ''}</p></div>`;
   const removedIds = [];
   const lines = $('lines');
@@ -303,7 +327,7 @@ async function vNew(el) {
     if (!val('dc')) { e.textContent = 'Välj närmaste ort i listan.'; return; }
     if (+val('w2') < +val('w1')) { e.textContent = 'Sista leveransveckan kan inte vara före första leveransen.'; return; }
     $('send').disabled = true;
-    const head = { addr: val('addr') || null, city: val('dc'), first_week: +val('w1'), last_week: +val('w2'), all_from_one: val('all') === '1', drawings: val('draw') };
+    const head = { addr: val('addr') || null, city: val('dc'), first_week: +val('w1'), last_week: +val('w2'), all_from_one: val('all') === '1', drawings: val('draw'), min_climate_level: +val('clim') || 0, epd_required: !!val('epdr') };
     if (R0) {
       const fail = err => { $('send').disabled = false; e.textContent = errText(err); };
       const { error: h } = await sb.from('requests').update(head).eq('id', R0.id); if (h) return fail(h);
@@ -312,7 +336,7 @@ async function vNew(el) {
       S.editReq = null; S.view = 'mina'; location.hash = 'mina'; flash('Förfrågan är uppdaterad. Fabrikerna ser att den är ändrad.'); return;
     }
     out.forEach(l => delete l._id);
-    const { data: r, error } = await sb.from('requests').insert({ buyer_org_id: S.org.id, created_by: S.session.user.id, addr: val('addr') || null, city: val('dc'), first_week: +val('w1'), last_week: +val('w2'), all_from_one: val('all') === '1', drawings: val('draw') }).select().single();
+    const { data: r, error } = await sb.from('requests').insert({ buyer_org_id: S.org.id, created_by: S.session.user.id, ...head }).select().single();
     if (error) { $('send').disabled = false; e.textContent = errText(error); return; }
     const { error: e2 } = await sb.from('request_lines').insert(out.map(l => ({ ...l, request_id: r.id })));
     if (e2) { $('send').disabled = false; await sb.from('requests').delete().eq('id', r.id); e.textContent = errText(e2); return; }
@@ -328,23 +352,23 @@ async function vMine(el) {
   const lineIds = R.flatMap(r => r.request_lines.map(l => l.id));
   const { data: A } = await sb.from('answers').select('*, offers(*)').in('line_id', lineIds).order('created_at');
   const chosenIds = [...new Set(R.flatMap(r => r.request_lines.map(l => l.chosen_org_id)).filter(Boolean))];
-  const { data: O } = chosenIds.length ? await sb.from('organizations').select('id,name,city,contact_name,phone,email').in('id', chosenIds) : { data: [] };
+  const { data: O } = chosenIds.length ? await sb.from('organizations').select('id,name,city,contact_name,phone,email,climate').in('id', chosenIds) : { data: [] };
   const org = id => O.find(o => o.id === id) || {};
   let h = '<h1>Mina förfrågningar</h1>';
   for (const r of R) {
     h += `<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><h2>${esc(r.addr || r.city)}</h2><span class="sub">skickad ${day(r.created_at)}${upd(r) ? ` · <span class="tag dev">Uppdaterad ${day(upd(r))}</span>` : ''}</span></div>
-    <p class="sub">Leverans ${wl(r.first_week)}–${wl(r.last_week)} till ${esc(r.city)} · ${r.all_from_one ? 'allt från en fabrik' : 'delar ok'} · ritningar: ${esc((r.drawings || '').toLowerCase())}</p>`;
+    <p class="sub">Leverans ${wl(r.first_week)}–${wl(r.last_week)} till ${esc(r.city)} · ${r.all_from_one ? 'allt från en fabrik' : 'delar ok'} · ritningar: ${esc((r.drawings || '').toLowerCase())}${r.min_climate_level ? ' · klimatkrav nivå ' + r.min_climate_level + ' eller bättre' : ''}${r.epd_required ? ' · EPD krävs' : ''}</p>`;
     for (const l of r.request_lines.filter(l => !l.removed).sort((a, b) => a.created_at.localeCompare(b.created_at))) {
       const ans = (A || []).filter(a => a.line_id === l.id), yes = ans.filter(a => a.status !== 'nej'), no = ans.length - yes.length;
-      const rows = yes.map((a, i) => { const share = a.status === 'delvis' ? +a.qty : +l.qty; const tm2 = a.transport / share; const del = +a.price + tm2; const dev = []; if (a.status === 'delvis' && r.all_from_one) dev.push(Math.round(share / l.qty * 100) + ' % av mängden'); if (a.week_to > r.last_week) dev.push('sista leverans ' + wl(a.week_to)); const co2 = a.km ? Math.round(a.km * tons(l, share) * 0.082 / 100) / 10 : null; return { a, i, dev, del, tm2, share, co2 }; }).sort((x, y) => (x.dev.length - y.dev.length) || (x.del - y.del));
+      const rows = yes.map((a, i) => { const share = a.status === 'delvis' ? +a.qty : +l.qty; const hasT = a.transport != null; const tm2 = hasT ? a.transport / share : null; const del = +a.price + (tm2 || 0); const dev = []; if (a.status === 'delvis' && r.all_from_one) dev.push(Math.round(share / l.qty * 100) + ' % av mängden'); if (a.week_to > r.last_week) dev.push('sista leverans ' + wl(a.week_to)); if (r.min_climate_level && !((+a.climate_level || 0) >= r.min_climate_level)) dev.push('klimatnivå under krav'); if (r.epd_required && !a.has_epd) dev.push('EPD saknas'); const co2 = a.km ? Math.round(a.km * tons(l, share) * 0.082 / 100) / 10 : null; const el = elCO2(a, l, share); const tot = el.t != null && co2 != null ? Math.round((el.t + co2) * 10) / 10 : null; return { a, i, dev, del, tm2, hasT, share, co2, el, tot }; }).sort((x, y) => (x.dev.length > 0) - (y.dev.length > 0) || (Math.round(x.del / 10) - Math.round(y.del / 10)) || ((x.tot ?? 1e9) - (y.tot ?? 1e9)) || ((+y.a.climate_level || 0) - (+x.a.climate_level || 0)) || (y.a.has_epd - x.a.has_epd) || (x.del - y.del));
       const label = (a, i) => l.chosen_org_id === a.factory_org_id ? esc(org(a.factory_org_id).name || 'Fabrik') : 'Fabrik ' + String.fromCharCode(65 + i);
       h += `<div class="line"><h3>${lineText(l)}</h3><p class="sub" style="margin:4px 0">${lineSub(l)} · ${yes.length} svar med pris, ${no} nej.</p>`;
-      if (yes.length) h += `<div class="scroll"><table><thead><tr><th>Fabrik</th><th>Klarar</th><th class="num">kr/${U(l)} LOK</th><th class="num">Transport kr/${U(l)}</th><th class="num">Kr/${U(l)} levererat</th><th class="num">Totalt kr</th><th>Leverans</th><th class="num">km</th><th class="num">CO2 ton</th><th>Krav</th><th></th></tr></thead><tbody>
-        ${rows.map(x => { const a = x.a, isC = l.chosen_org_id === a.factory_org_id; return `<tr><td><b>${label(a, x.i)}</b><div class="sub">${isC ? esc(org(a.factory_org_id).city || '') : 'anonym'}</div>${isStale(a, l.edited_at || r.edited_at) ? '<span class="tag dev">Svar före er ändring</span>' : ''}${a.note ? `<div class="sub">”${esc(a.note)}”</div>` : ''}</td><td>${a.status === 'delvis' ? fmt(a.qty) + ' ' + U(l) : 'Hela'}</td><td class="num">${fmt(a.price)}</td><td class="num">${fmt(x.tm2)}<div class="sub">(Estimat)</div></td><td class="num"><b>${fmt(x.del)}</b><div class="sub">(Estimat)</div></td><td class="num">${fmt(x.del * x.share)}<div class="sub">(Estimat)</div></td><td>${wl(a.week_from)}–${wl(a.week_to)}</td><td class="num">${a.km != null ? fmt(a.km) : '–'}</td><td class="num">${x.co2 != null ? x.co2.toLocaleString('sv-SE') : '–'}</td><td>${x.dev.length ? '<span class="tag dev">' + esc(x.dev.join(', ')) + '</span>' : '<span class="tag ok">Uppfyller</span>'}</td><td>${l.chosen_org_id ? (isC ? '<span class="tag acc">Vald</span>' : '') : `<button class="btn2" data-pick="${l.id}|${a.factory_org_id}" data-name="${label(a, x.i)}">Välj</button>`}</td></tr>`; }).join('')}</tbody></table></div>`;
+      if (yes.length) h += `<div class="scroll"><table><thead><tr><th>Fabrik</th><th>Klarar</th><th class="num">kr/${U(l)} LOK</th><th class="num">Transport kr/${U(l)}</th><th class="num">Kr/${U(l)} levererat</th><th class="num">Totalt kr</th><th>Leverans</th><th class="num">km</th><th class="num">CO2 element, ton<br><span style="font-weight:500">(A1–A3)</span></th><th class="num">CO2 transport, ton<br><span style="font-weight:500">(A4)</span></th><th class="num">CO2 totalt, ton</th><th>Klimatnivå</th><th>EPD</th><th>Krav</th><th></th></tr></thead><tbody>
+        ${rows.map(x => { const a = x.a, isC = l.chosen_org_id === a.factory_org_id; return `<tr><td><b>${label(a, x.i)}</b><div class="sub">${isC ? esc(org(a.factory_org_id).city || '') : 'anonym'}</div>${isStale(a, l.edited_at || r.edited_at) ? '<span class="tag dev">Svar före er ändring</span>' : ''}${a.note ? `<div class="sub">”${esc(a.note)}”</div>` : ''}</td><td>${a.status === 'delvis' ? fmt(a.qty) + ' ' + U(l) : 'Hela'}</td><td class="num">${fmt(a.price)}</td><td class="num">${x.hasT ? fmt(x.tm2) + '<div class="sub">(Estimat)</div>' : '<span class="sub">ej angiven</span>'}</td><td class="num"><b>${fmt(x.del)}</b><div class="sub">${x.hasT ? '(Estimat)' : 'exkl. transport'}</div></td><td class="num">${fmt(x.del * x.share)}<div class="sub">(Estimat)</div></td><td>${wl(a.week_from)}–${wl(a.week_to)}</td><td class="num">${a.km != null ? fmt(a.km) : '–'}</td><td class="num">${x.el.t != null ? x.el.t.toLocaleString('sv-SE') : '–'}<div class="sub">${x.el.src}</div></td><td class="num">${x.co2 != null ? x.co2.toLocaleString('sv-SE') : '–'}</td><td class="num"><b>${x.tot != null ? x.tot.toLocaleString('sv-SE') : '–'}</b></td><td>${esc(lvlTxt(a.climate_level))}</td><td>${a.has_epd ? '<span class="tag ok">Ja</span>' : 'Nej'}</td><td>${x.dev.length ? '<span class="tag dev">' + esc(x.dev.join(', ')) + '</span>' : '<span class="tag ok">Uppfyller</span>'}</td><td>${l.chosen_org_id ? (isC ? '<span class="tag acc">Vald</span>' : '') : `<button class="btn2" data-pick="${l.id}|${a.factory_org_id}" data-name="${label(a, x.i)}">Välj</button>`}</td></tr>`; }).join('')}</tbody></table></div>`;
       else h += '<p class="sub">Inga svar ännu.</p>';
       if (l.chosen_org_id) {
         const f = org(l.chosen_org_id), a = ans.find(x => x.factory_org_id === l.chosen_org_id), of = a?.offers;
-        h += `<div class="note"><b>Ni har valt ${esc(f.name || 'fabriken')}.</b> Kontakt: ${esc(f.contact_name || '')}${f.phone ? ', ' + esc(f.phone) : ''}${f.email ? ', ' + esc(f.email) : ''}. Skicka ritningar och underlag direkt till dem.</div>`;
+        h += `<div class="note"><b>Ni har valt ${esc(f.name || 'fabriken')}.</b> Kontakt: ${esc(f.contact_name || '')}${f.phone ? ', ' + esc(f.phone) : ''}${f.email ? ', ' + esc(f.email) : ''}. Skicka ritningar och underlag direkt till dem.${(() => { const g = (f.climate || {})[l.product] || {}; return g.reg || g.link ? ` EPD${g.reg ? ' ' + esc(g.reg) : ''}${g.link ? `: <a href="${esc(/^https?:\/\//.test(g.link) ? g.link : '#')}" target="_blank" rel="noopener">${esc(g.link)}</a>` : ''}` : ''; })()}</div>`;
         if (of) h += `<div class="card" style="background:#F7F8F6;margin:8px 0"><h3>Fast offert</h3><p>${fmt(of.price)} kr/${U(l)} LOK · transport ${fmt(of.transport)} kr (estimat) · giltig till ${esc(of.valid_until || '–')}${of.note ? '<br>Villkor: ' + esc(of.note) : ''}</p>
           <p style="margin-bottom:0">${l.outcome ? `Ni har markerat: <b>${l.outcome === 'affar' ? 'Affär' : 'Ingen affär'}</b>.` : `Blev det affär? <button class="btn2" data-out="${l.id}|affar">Ja, affär</button> <button class="lnk" data-out="${l.id}|ingen">Nej</button>`}</p></div>`;
         else h += '<p class="sub">Väntar på fast offert från fabriken.</p>';
@@ -374,24 +398,25 @@ async function vInbox(el) {
   const card = x => {
     const a = ans(x.line_id), l = x, tr = transport(o, l, l.qty, x.city), stale = isStale(a, edited(x));
     let c = `<div class="card"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><h3>${lineText(l)}</h3><span class="sub">${x.chosen_me ? esc(x.buyer_name) : 'Anonym köpare'} · ${day(x.request_created_at)}${edited(x) ? ` · <span class="tag dev">Uppdaterad ${day(edited(x))}</span>` : ''}</span></div>
-    <p class="sub" style="margin:6px 0">${lineSub(l)} · leverans ${wl(x.first_week)}–${wl(x.last_week)} till ${esc(x.city)}${tr ? ` (cirka ${fmt(tr.km)} km från er)` : ''} · ${x.all_from_one ? 'allt från en fabrik' : 'delar ok'} · ritningar: ${esc((x.drawings || '').toLowerCase())}</p>
+    <p class="sub" style="margin:6px 0">${lineSub(l)} · leverans ${wl(x.first_week)}–${wl(x.last_week)} till ${esc(x.city)}${tr ? ` (cirka ${fmt(tr.km)} km från er)` : ''} · ${x.all_from_one ? 'allt från en fabrik' : 'delar ok'} · ritningar: ${esc((x.drawings || '').toLowerCase())}${x.min_climate_level ? ' · <b>klimatkrav nivå ' + x.min_climate_level + ' eller bättre</b>' : ''}${x.epd_required ? ' · <b>EPD krävs</b>' : ''}</p>
     ${stale ? '<div class="note"><b>Köparen har ändrat förfrågan efter ert svar.</b> Kontrollera och uppdatera svaret.</div>' : ''}`;
     if (x.chosen_me) {
       const of = a?.offers;
       c += `<div class="note"><b>Köparen har valt er.</b> ${esc(x.buyer_name)}: ${esc(x.buyer_contact || '')}${x.buyer_phone ? ', ' + esc(x.buyer_phone) : ''}${x.buyer_email ? ', ' + esc(x.buyer_email) : ''}${x.addr ? ' · projekt: ' + esc(x.addr) : ''}. Begär ritningar av köparen och lämna fast offert här.</div>`;
       if (of && S.edit !== 'o' + x.line_id) c += `<p>Er fasta offert: ${fmt(of.price)} kr/${U(l)} LOK, transport ${fmt(of.transport)} kr (estimat), giltig till ${esc(of.valid_until || '–')}. ${x.outcome ? `Köparen har markerat: <b>${x.outcome === 'affar' ? 'Affär' : 'Ingen affär'}</b>.` : ''} <button class="lnk" data-edit="o${x.line_id}">Ändra offerten</button></p>`;
-      else { const d = of || {}; c += `<div class="row"><div><label>Fast pris, kr/${U(l)} LOK</label><input id="op${x.line_id}" type="number" value="${esc(d.price ?? a.price)}"></div><div><label>Transport, kr totalt (estimat)</label><input id="ot${x.line_id}" type="number" value="${esc(d.transport ?? a.transport)}"></div><div><label>Giltig till</label><input id="ov${x.line_id}" type="date" value="${esc(d.valid_until || '')}"></div></div>
+      else { const d = of || {}; c += `<div class="row"><div><label>Fast pris, kr/${U(l)} LOK</label><input id="op${x.line_id}" type="number" value="${esc(d.price ?? a.price)}"></div><div><label>Transport, kr totalt (estimat)</label><input id="ot${x.line_id}" type="number" value="${esc(d.transport ?? a.transport ?? '')}"></div><div><label>Giltig till</label><input id="ov${x.line_id}" type="date" value="${esc(d.valid_until || '')}"></div></div>
         <div style="margin-top:10px"><label>Villkor och kommentar</label><textarea id="on${x.line_id}" rows="2">${esc(d.note || '')}</textarea></div><div class="err" id="oe${x.line_id}"></div><p><button class="btn" data-offer="${x.line_id}">Skicka fast offert</button></p>`; }
     } else if (x.chosen_other) c += '<p class="sub">Köparen valde en annan fabrik för den här raden.</p>';
-    else if (a && !stale && S.edit !== x.line_id) c += `<p>Ert svar: ${a.status === 'nej' ? '<b>Nej</b>' : `<b>${a.status === 'delvis' ? fmt(a.qty) + ' ' + U(l) : 'Hela mängden'}</b>, cirka ${fmt(a.price)} kr/${U(l)} LOK, transport ${fmt(a.transport)} kr (estimat), ${wl(a.week_from)}–${wl(a.week_to)}`}. <button class="lnk" data-edit="${x.line_id}">Ändra svar</button></p>`;
+    else if (a && !stale && S.edit !== x.line_id) c += `<p>Ert svar: ${a.status === 'nej' ? '<b>Nej</b>' : `<b>${a.status === 'delvis' ? fmt(a.qty) + ' ' + U(l) : 'Hela mängden'}</b>, cirka ${fmt(a.price)} kr/${U(l)} LOK, transport ${a.transport != null ? fmt(a.transport) + ' kr (estimat)' : 'ej angiven'}, ${esc(lvlTxt(a.climate_level))}, ${wl(a.week_from)}–${wl(a.week_to)}`}. <button class="lnk" data-edit="${x.line_id}">Ändra svar</button></p>`;
     else {
-      const d = a ? { ...a } : { status: 'helt', qty: l.qty, price: '', transport: tr ? tr.kr : '', week_from: x.first_week, week_to: x.last_week, note: '' };
-      if (stale && tr) d.transport = tr.kr;
+      const myC = (o.climate || {})[l.product] || {};
+      const d = a ? { ...a } : { status: 'helt', qty: l.qty, price: '', transport: '', week_from: x.first_week, week_to: x.last_week, note: '', climate_level: myC.lvl ?? '' };
       const k = x.line_id;
       c += `<div class="row" style="margin-top:8px"><div><label>Svar</label><select id="st${k}" data-k="${k}" class="stsel"><option value="helt" ${d.status === 'helt' ? 'selected' : ''}>Kan hela mängden</option><option value="delvis" ${d.status === 'delvis' ? 'selected' : ''}>Kan delvis</option><option value="nej" ${d.status === 'nej' ? 'selected' : ''}>Nej</option></select></div>
       <div><label>Mängd vid delvis, ${U(l)}</label><input id="m2${k}" data-k="${k}" class="m2in" type="number" value="${esc(d.qty ?? l.qty)}"></div>
       <div><label>Ungefärligt pris, kr/${U(l)} LOK</label><input id="pr${k}" type="number" min="1" value="${esc(d.price)}"></div>
-      <div><label>Transport, kr totalt (estimat)</label><input id="tr${k}" type="number" min="0" value="${esc(d.transport)}"><div class="sub" id="tri${k}">${tr ? trInfo(o, l, tr) : 'Välj fabrikens ort i profilen för transportförslag'}</div></div></div>
+      <div><label>Transport, kr totalt (estimat)</label><input id="tr${k}" type="number" min="0" placeholder="${tr ? 't.ex. ' + fmt(tr.kr) : ''}" value="${esc(d.transport ?? '')}"><div class="sub" id="tri${k}">${tr ? trInfo(o, l, tr) : 'Välj fabrikens ort i profilen för att se avstånd och ett exempel'}</div></div>
+      <div><label>Klimatnivå i svaret</label><select id="lv${k}">${lvlOpts(d.climate_level)}</select><div class="sub">${myC.v ? 'EPD: ' + fmt(myC.v) + ' kg CO2e ' + GWPU[myC.u || 'ton'] : 'Ingen EPD-siffra i profilen'}</div></div></div>
       <div class="row" style="margin-top:10px"><div><label>Första leverans</label><select id="wf${k}">${weekOpts(d.week_from)}</select></div><div><label>Sista leverans</label><select id="wt${k}">${weekOpts(d.week_to)}</select></div><div style="flex-basis:300px"><label>Kommentar till köparen (valfri)</label><input id="no${k}" value="${esc(d.note || '')}"></div></div>
       <div class="err" id="ae${k}"></div><p><button class="btn" data-ans="${k}">Skicka svar</button>${a ? ' <button class="lnk" data-edit="">Avbryt</button>' : ''}</p>`;
     }
@@ -402,13 +427,14 @@ async function vInbox(el) {
   el.innerHTML = h;
   const nb = $('n-inkorg'); if (nb && open.length) { nb.textContent = open.length; nb.style.display = ''; }
   const find = k => X.find(x => x.line_id === k);
-  el.querySelectorAll('.m2in').forEach(i => i.oninput = () => { const x = find(i.dataset.k); const q = $('st' + i.dataset.k).value === 'delvis' ? (+i.value || 0) : x.qty; const t = transport(o, x, q, x.city); if (t) { $('tr' + i.dataset.k).value = t.kr; $('tri' + i.dataset.k).textContent = trInfo(o, x, t); } });
+  el.querySelectorAll('.m2in').forEach(i => i.oninput = () => { const x = find(i.dataset.k); const q = $('st' + i.dataset.k).value === 'delvis' ? (+i.value || 0) : x.qty; const t = transport(o, x, q, x.city); if (t) { $('tr' + i.dataset.k).placeholder = 't.ex. ' + fmt(t.kr); $('tri' + i.dataset.k).textContent = trInfo(o, x, t); } });
   el.querySelectorAll('.stsel').forEach(s => s.onchange = () => { const i = $('m2' + s.dataset.k); if (s.value !== 'delvis') i.value = find(s.dataset.k).qty; i.oninput(); });
   el.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => { S.edit = b.dataset.edit || null; render(); });
   el.querySelectorAll('[data-ans]').forEach(b => b.onclick = async () => {
     const k = b.dataset.ans, x = find(k), e = $('ae' + k), st = val('st' + k);
-    const d = { line_id: k, factory_org_id: o.id, status: st, qty: st === 'delvis' ? +val('m2' + k) : null, price: st === 'nej' ? null : +val('pr' + k), transport: st === 'nej' ? null : +val('tr' + k), week_from: st === 'nej' ? null : +val('wf' + k), week_to: st === 'nej' ? null : +val('wt' + k), note: val('no' + k) || null, km: transport(o, x, x.qty, x.city)?.km ?? null };
-    if (st !== 'nej') { if (!(d.price > 0)) { e.textContent = 'Ange ungefärligt pris.'; return; } if (!(d.transport >= 0)) { e.textContent = 'Ange transport (0 om köparen hämtar).'; return; } if (d.week_to < d.week_from) { e.textContent = 'Sista leverans kan inte vara före första.'; return; } }
+    const myC = (o.climate || {})[x.product] || {};
+    const d = { line_id: k, factory_org_id: o.id, status: st, qty: st === 'delvis' ? +val('m2' + k) : null, price: st === 'nej' ? null : +val('pr' + k), transport: st === 'nej' || val('tr' + k) === '' ? null : +val('tr' + k), climate_level: val('lv' + k) === '' ? null : +val('lv' + k), has_epd: !!(myC.v || myC.reg), gwp_value: myC.v || null, gwp_unit: myC.v ? (myC.u || 'ton') : null, week_from: st === 'nej' ? null : +val('wf' + k), week_to: st === 'nej' ? null : +val('wt' + k), note: val('no' + k) || null, km: transport(o, x, x.qty, x.city)?.km ?? null };
+    if (st !== 'nej') { if (!(d.price > 0)) { e.textContent = 'Ange ungefärligt pris.'; return; } if (d.transport != null && !(d.transport >= 0)) { e.textContent = 'Transporten kan inte vara negativ.'; return; } if (d.week_to < d.week_from) { e.textContent = 'Sista leverans kan inte vara före första.'; return; } }
     if (st === 'delvis' && !(d.qty > 0 && d.qty < x.qty)) { e.textContent = 'Ange en mängd som är mindre än hela.'; return; }
     b.disabled = true;
     const { error } = await sb.from('answers').upsert(d, { onConflict: 'line_id,factory_org_id' });
@@ -442,7 +468,7 @@ async function vAdmin(el) {
   <div class="card stat"><div><b>${O.length}</b>företag</div><div><b>${O.filter(isFactory).length}</b>fabriker</div><div><b>${O.filter(isBuyer).length}</b>köpare</div><div><b>${nNew}</b>att verifiera</div><div><b>${live.length}</b>förfrågningar</div><div><b>${(A || []).filter(a => a.status !== 'nej').length}</b>svar med pris</div><div><b>${(L || []).filter(l => l.chosen_org_id).length}</b>valda fabriker</div><div><b>${(L || []).filter(l => l.outcome === 'affar').length}</b>affärer</div></div>
   <div class="card"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px"><h2>Företag</h2><select id="af" style="width:auto">${['alla', 'ny', 'verifierad', 'avstangd'].map(k => `<option value="${k}" ${f === k ? 'selected' : ''}>${k === 'alla' ? 'Alla' : STATUS[k]}</option>`).join('')}</select></div>
   <div class="scroll"><table><thead><tr><th>Företag</th><th>Roll</th><th>Ort</th><th>Kontakt</th><th>Produkter</th><th>Registrerad</th><th>Status</th><th></th></tr></thead><tbody>
-  ${list.map(o => { const users = (P || []).filter(p => p.org_id === o.id); return `<tr><td><b>${esc(o.name)}</b><div class="sub">${users.map(u => esc(u.email)).join(', ')}</div></td><td>${ROLES[o.role]}</td><td>${esc(o.city || '–')}</td><td>${esc(o.contact_name || '')}<div class="sub">${esc(o.phone || '')}</div></td><td class="sub">${esc((o.products || []).join(', '))}</td><td>${day(o.created_at)}</td><td><span class="tag ${o.status === 'verifierad' ? 'ok' : o.status === 'avstangd' ? 'dev' : ''}">${STATUS[o.status]}</span></td>
+  ${list.map(o => { const users = (P || []).filter(p => p.org_id === o.id); return `<tr><td><b>${esc(o.name)}</b><div class="sub">${users.map(u => esc(u.email)).join(', ')}</div></td><td>${ROLES[o.role]}</td><td>${esc(o.city || '–')}</td><td>${esc(o.contact_name || '')}<div class="sub">${esc(o.phone || '')}</div></td><td class="sub">${esc((o.products || []).join(', '))}${Object.entries(o.climate || {}).some(([, g]) => g.v || g.reg) ? '<div><span class="tag ok">EPD: ' + esc(Object.entries(o.climate).filter(([, g]) => g.v || g.reg).map(([p]) => p).join(', ')) + '</span></div>' : ''}</td><td>${day(o.created_at)}</td><td><span class="tag ${o.status === 'verifierad' ? 'ok' : o.status === 'avstangd' ? 'dev' : ''}">${STATUS[o.status]}</span></td>
   <td style="white-space:nowrap">${o.status !== 'verifierad' ? `<button class="btn2" data-st="${o.id}|verifierad">Verifiera</button> ` : ''}${o.status !== 'avstangd' && o.id !== S.org.id ? `<button class="lnk" data-st="${o.id}|avstangd">Stäng av</button>` : ''}${o.status === 'avstangd' ? `<button class="lnk" data-st="${o.id}|ny">Återaktivera</button>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="8" class="sub">Inga företag.</td></tr>'}
   </tbody></table></div></div>
   <div class="card"><h2>Senaste förfrågningar</h2><div class="scroll"><table><thead><tr><th>Datum</th><th>Köpare</th><th>Ort</th><th>Rader</th><th class="num">Svar</th><th>Status</th></tr></thead><tbody>
