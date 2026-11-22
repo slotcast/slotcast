@@ -5,7 +5,7 @@ export const LANDING = `
   <div class="hero-txt">
     <p class="kick">Marknadsplatsen för betongelement</p>
     <h1 class="big">Betongelement nära ert projekt, från en fabrik som möter era miljökrav</h1>
-    <p class="lead">Fler fabriker att välja bland. Få svar från prefabfabriker ni kanske aldrig har anlitat, eller inte har jobbat med på länge. En fabrik närmare projektet betyder lägre transportkostnad och mindre CO2. Varje svar visar också fabrikens klimatnivå, EPD och elementens CO2, så att ni hittar en leverantör som är nära och möter era miljökrav. Vid samma pris vinner miljön.</p>
+    <p class="lead">Fler fabriker att välja bland. Få svar från prefabfabriker ni kanske aldrig har anlitat, eller inte har jobbat med på länge. Samma betong från en fabrik nära ger lägre kostnad och lägre utsläpp än från en fabrik långt bort. Har ni klimatkrav ser ni också fabrikens klimatnivå, EPD och elementens CO2 i varje svar.</p>
     <p class="lead">Väggar och socklar från närmaste fabrik. Balkonger och trappor från specialister i Sverige, Danmark och Polen. Plattbärlag och håldäck till bästa pris levererat.</p>
     <p class="free">Alltid gratis för köpare. Har ni en fabrik? Nå köpare ni inte har i dag, gratis till augusti 2027.</p>
   </div>
@@ -35,13 +35,13 @@ export const LANDING = `
     <p class="kick">För fabriker</p>
     <h3 class="h3">Fyll luckorna i produktionen med köpare ni inte når i dag</h3>
     <ul>
+      <li>Fler order från ert närområde: förfrågningar på de produkter ni tillverkar, från byggföretag, stålhallsbyggare och andra fabriker</li>
       <li>Lägg in ledig kapacitet i m² och veckor; ingen produkt behövs, det avgör köparens förfrågan</li>
-      <li>Förfrågningar på de produkter ni tillverkar, från byggföretag, stålhallsbyggare och andra fabriker</li>
       <li>Ungefärligt svar först, fast offert när köparen har valt er</li>
-      <li>Visa era miljöinvesteringar: lägg in siffran ur er EPD, så syns elementens CO2 och er klimatnivå i varje svar, för alla köpare</li>
-      <li>Vid samma pris vinner fabriken med lägst klimatpåverkan, så er EPD blir ett sätt att skilja er från mängden</li>
+      <li>Nästan ingen fabrik säljer på närhet i dag. Gör det med oss: köparen ser km och transportkostnad i varje svar</li>
       <li>Konkurrenter ser aldrig era svar eller priser</li>
       <li>Ingen provision; affären gör ni direkt med köparen</li>
+      <li>Har ni EPD, ISO-certifiering eller fossilfria transporter syns det i svaren. Har ni det inte är ni ändå med, och <a href="#vagledning">vägledningen</a> visar hur ni kommer igång</li>
     </ul>
     <button class="btn" data-reg="fabrik">Anslut er fabrik</button>
   </div>
@@ -77,19 +77,19 @@ export const LANDING = `
     <div>
       <p class="kick">Nära och klimat</p>
       <h2 class="h2">Nära är bra för ekonomin och miljön</h2>
-      <p>Betongelement är tunga. Ju kortare väg från fabrik till projekt, desto lägre transportkostnad och desto mindre utsläpp. Klimatkraven på stommen växer också, med klimatdeklaration vid bygglov, Miljöbyggnad och Svanen.</p>
-      <p>Därför visar varje svar fabrikens klimatnivå, om den har en miljövarudeklaration (EPD) och CO2 för element och transport, oavsett om köparen har ställt krav. Vid samma pris hamnar fabriken med lägst klimatpåverkan först.</p>
-      <p>För fabrikerna blir det marknadsföring av miljöinvesteringarna: klimatförbättrad betong, EPD och fossilfria transporter syns där köparna jämför. Fabriker utan EPD svarar med branschens typvärde, så alla kan vara med.</p>
+      <p>Betongelement är tunga. Samma betong från en fabrik nära ger lägre kostnad och lägre utsläpp än från en fabrik långt bort. Klimatkraven på stommen växer också, med klimatdeklaration vid bygglov, Miljöbyggnad och Svanen.</p>
+      <p>Därför visar varje svar km, CO2 för element och transport, fabrikens klimatnivå och om den har en miljövarudeklaration (EPD). Lägst pris levererat kommer först; vid samma pris hamnar lägst klimatpåverkan först. Ställer ni klimatkrav hamnar svar som inte når kraven sist.</p>
+      <p>För fabrikerna blir det marknadsföring av miljöinvesteringarna: klimatförbättrad betong, EPD, ISO-certifiering och fossilfria transporter syns där köparna jämför. Fabriker utan EPD visas med Boverkets generiska värde, så alla kan vara med.</p>
     </div>
     <div class="pane">
       <h3 class="h3">Så räknar Slotcast klimatpåverkan</h3>
       <ol>
         <li><b>Fabriken lägger in sin EPD</b> per produkt: klimatpåverkan för tillverkningen (A1–A3) i kg CO2e per ton, m³ eller m², registreringsnummer och länk.</li>
         <li><b>Slotcast räknar om</b> till hela ordern, med elementens tjocklek och vikt.</li>
-        <li><b>Transporten läggs till</b> (A4) med vägavstånd och fabrikens fordon, diesel, HVO100, biogas eller el, enligt Boverkets klimatdatabas. Köparen ser CO2 för element, transport och totalt.</li>
-        <li><b>Utan EPD</b> används Boverkets generiska värde, märkt "generiskt". Det ligger cirka 25 % över medel, så en egen EPD lönar sig.</li>
+        <li><b>Transporten läggs till</b> (A4) med vägavstånd och fabrikens fordon, diesel eller fossilfri transport (HVO100, biogas eller el), enligt Boverkets klimatdatabas. Köparen ser CO2 för element, transport och totalt.</li>
+        <li><b>Utan EPD</b> används Boverkets generiska värde, märkt "generiskt". Det är typvärdet plus 25 %, så en egen EPD lönar sig. <a href="#vagledning">Så får ni en EPD.</a></li>
       </ol>
-      <p class="sub">Klimatnivåerna följer Svensk Betongs vägledning för klimatförbättrad betong: nivå 1–4 är 10–40 % lägre klimatpåverkan än branschreferensen, nivå 5 är halverad.</p>
+      <p class="sub">Klimatnivåerna följer Svensk Betongs vägledning för klimatförbättrad betong: nivå 1–4 är 10–40 % lägre klimatpåverkan än typvärdet, nivå 5 är halverad och nivå 6 är 60 % lägre. Slotcast räknar fram nivån ur fabrikens EPD.</p>
     </div>
   </div>
 </section>
@@ -126,15 +126,15 @@ export const LANDING = `
   <details><summary>Måste fabriken ange produkt för sin lediga kapacitet?</summary><p>Nej. Ledig kapacitet anges i m² och veckor. Om det blir sandwichvägg, massiv vägg eller sockel avgör köparens förfrågan, bland de produkter fabriken tillverkar.</p></details>
   <details><summary>Hur snabbt kan elementen levereras?</summary><p>Det avgör fabriken. Fabriker behöver oftast tillverkningsritningar 6–8 veckor före produktion, så akuta förfrågningar fungerar bäst när ritningarna är klara.</p></details>
   <details><summary>Vem ansvarar för transporten?</summary><p>Köparen och fabriken, som i dag. Fabriken anger sin transportkostnad i svaret; lämnas den tom visas priset exklusive transport. Köparen ser km och transportens CO2 för varje svar.</p></details>
-  <details><summary>Hur visas klimatpåverkan?</summary><p>Varje svar visar CO2 för element (ur fabrikens EPD), transport och totalt, fabrikens klimatnivå och om den har EPD, oavsett om köparen har ställt krav. Vid samma pris hamnar lägst CO2 totalt först. Köparen kan också ange lägsta klimatnivå och om EPD krävs.</p></details>
+  <details><summary>Hur visas klimatpåverkan?</summary><p>Varje svar visar CO2 för element (ur fabrikens EPD, annars generiskt värde), transport och totalt, fabrikens klimatnivå och om den har EPD. Vid samma pris hamnar lägst CO2 totalt först. Köparen kan också ange lägsta klimatnivå och om EPD krävs; först då markeras svar som inte når kraven.</p></details>
   <details><summary>Hur räknas avståndet?</summary><p>Som vägavstånd för lastbil mellan fabrikens adress och projektets adress, från en karttjänst. Saknas adressen räknas avståndet från orten.</p></details>
   <details><summary>Kan vi ladda upp ritningar?</summary><p>Uppladdning av ritningar och underlag kommer snart. Tills vidare skickar ni underlaget direkt till fabriken när ni har valt den.</p></details>
-  <details><summary>Måste fabriken ha en EPD?</summary><p>Nej. Utan EPD används Boverkets generiska värde, som är satt cirka 25 % över medel. Med en egen EPD syns fabrikens verkliga, oftast lägre, klimatpåverkan, och köparen kan föra över siffran till sin klimatdeklaration.</p></details>
+  <details><summary>Måste fabriken ha en EPD?</summary><p>Nej. Utan EPD används Boverkets generiska värde, som är satt cirka 25 % över medel. Med en egen EPD syns fabrikens verkliga, oftast lägre, klimatpåverkan, och köparen kan föra över siffran till sin klimatdeklaration. <a href="#vagledning">Läs vägledningen.</a></p></details>
 </section>
 
 <footer class="foot"><div class="wrap foot-in">
   <div class="logo">slot<span>cast</span></div>
-  <p><a href="mailto:filip@bjornstjerna.se">filip@bjornstjerna.se</a> · <a href="#integritet">Integritetspolicy</a></p>
+  <p><a href="mailto:filip@bjornstjerna.se">filip@bjornstjerna.se</a> · <a href="#vagledning">Vägledning klimatdata</a> · <a href="#integritet">Integritetspolicy</a></p>
 </div></footer>
 `;
 
@@ -182,5 +182,54 @@ export const POLICY = `
 
 <h2>Ändringar</h2>
 <p>Ändrar vi policyn meddelar vi det i tjänsten och via mejl om ändringen är väsentlig.</p>
+</div></div>
+`;
+
+export const GUIDE = `
+<div class="wrap blk policy"><div class="card">
+<p><a href="#">← Tillbaka</a></p>
+<h1>Klimatdata för er fabrik – vägledning</h1>
+<p class="lead2">Ni behöver ingen EPD för att vara med i Slotcast. Men med en egen EPD syns er verkliga klimatpåverkan, som nästan alltid är lägre än det generiska värdet. Så här kommer ni igång, i tre steg.</p>
+
+<h2>Steg 1: Ni är med direkt, med generiskt värde</h2>
+<p>Lämnar ni klimatfälten tomma i profilen visar Slotcast Boverkets generiska värde för produkten. Det är typvärdet plus 25 %, alltså medvetet högt satt. Köparen ser "generiskt värde" i stället för en EPD. Ni förlorar inga förfrågningar på det: lägst pris levererat kommer först, och klimatet markeras bara när köparen själv har ställt krav.</p>
+
+<h2>Steg 2: Ta fram en egen EPD</h2>
+<ul>
+<li><b>Vad det är:</b> en miljövarudeklaration enligt EN 15804, granskad av tredje part. Den visar klimatpåverkan för tillverkningen (A1–A3) i kg CO2e, oftast per ton element. Den gäller i fem år.</li>
+<li><b>Enklaste vägen:</b> Svensk Betongs EPD-verktyg (IVL EPD-generator för betong), som medlemmar kan använda. Ni fyller i recept, energi och transporter av råvaror, och verktyget räknar. EPD:n publiceras hos EPD-Norge (EPD Global). Andra vägar är One Click LCA eller en konsult.</li>
+<li><b>Vad ni behöver samla in:</b> recept per produkt (cement, tillsatsmaterial, ballast, armering, isolering), el och värme i fabriken under ett år, total produktion i ton och avstånd till era leverantörer.</li>
+<li><b>Börja med er största produkt.</b> En EPD per produkttyp räcker, till exempel massiv vägg eller sandwichvägg.</li>
+</ul>
+<p>Lägg sedan in värdet, registreringsnumret och länken i profilen. Slotcast räknar fram er klimatnivå.</p>
+
+<h2>Steg 3: Klimatförbättra betongen</h2>
+<p>Det vanligaste sättet är att ersätta en del av cementen med slagg eller att byta till en cement med lägre klimatpåverkan. Varje steg om 10 % under typvärdet ger en nivå (nivå 1–6). Tänk på att mer slagg kan ge längre härdtid i formen.</p>
+
+<h2>Standardmått: vad brukar en betong ha?</h2>
+<p>Typvärdet är vad en vanlig betong av produkten brukar ha i klimatpåverkan för tillverkningen, enligt Svensk Betongs vägledning för klimatförbättrad betong (tabell 3, inomhus och balkonger utomhus). Jämför med er EPD.</p>
+<div class="scroll"><table><thead><tr><th>Produkt</th><th class="num">Typvärde, kg CO2e/ton</th><th class="num">Generiskt (utan EPD)</th><th class="num">Nivå 1</th><th class="num">Nivå 4</th><th class="num">Nivå 5</th><th class="num">Nivå 6</th><th class="num">Typvärde, kg CO2e/m² (ungefär)</th></tr></thead><tbody>
+<tr><td>Sandwichvägg</td><td class="num">235</td><td class="num">294</td><td class="num">211</td><td class="num">141</td><td class="num">117</td><td class="num">94</td><td class="num">130 (230 mm betong)</td></tr>
+<tr><td>Massiv vägg</td><td class="num">155</td><td class="num">194</td><td class="num">139</td><td class="num">93</td><td class="num">77</td><td class="num">62</td><td class="num">74 (200 mm)</td></tr>
+<tr><td>Sockel</td><td class="num">235</td><td class="num">294</td><td class="num">211</td><td class="num">141</td><td class="num">117</td><td class="num">94</td><td class="num">85 (150 mm betong)</td></tr>
+<tr><td>Plattbärlag, filigran</td><td class="num">185</td><td class="num">231</td><td class="num">166</td><td class="num">111</td><td class="num">92</td><td class="num">74</td><td class="num">22 (50 mm)</td></tr>
+<tr><td>Plattbärlag, massiv RD-platta</td><td class="num">185</td><td class="num">231</td><td class="num">166</td><td class="num">111</td><td class="num">92</td><td class="num">74</td><td class="num">89 (200 mm)</td></tr>
+<tr><td>Håldäck</td><td class="num">135</td><td class="num">169</td><td class="num">121</td><td class="num">81</td><td class="num">67</td><td class="num">54</td><td class="num">42 (HD/F 200)</td></tr>
+<tr><td>Balkong</td><td class="num">210</td><td class="num">263</td><td class="num">189</td><td class="num">126</td><td class="num">105</td><td class="num">84</td><td class="num">111 (220 mm)</td></tr>
+<tr><td>Trappa</td><td class="num">210</td><td class="num">263</td><td class="num">189</td><td class="num">126</td><td class="num">105</td><td class="num">84</td><td class="num">–</td></tr>
+</tbody></table></div>
+<p class="sub">Värdena gäller tillverkningen (A1–A3) inklusive armering, ingjutningsgods och isolering. Nivåkolumnerna visar högsta värde för nivån (10, 40, 50 och 60 % under typvärdet). Massiv vägg motsvarar "Väggar (RV)" och sockel räknas som sandwichvägg. Per m² är ungefärligt, med 2,4 ton betong per m³.</p>
+
+<h2>Mät alltid på samma sätt</h2>
+<ul>
+<li>Använd klimatpåverkan för tillverkningen, A1–A3, raden GWP-GHG (annars GWP-total).</li>
+<li>Ange helst per ton, som EPD:erna gör. Slotcast räknar om till hela ordern.</li>
+<li>Transporten (A4) räknar Slotcast själv, utifrån avstånd och om ni kör diesel eller fossilfri transport.</li>
+</ul>
+
+<h2>Certifiering</h2>
+<p>Kryssa i profilen i om ni har ISO 9001 (kvalitet), ISO 14001 (miljö) eller ISO 45001 (arbetsmiljö). Det visas för köparen i era svar.</p>
+
+<p class="sub">Källor: <a href="https://www.svenskbetong.se/component/sbdocs/ladda-ner/60/vagledning-klimatforbattrad-betong-utgava-2" target="_blank" rel="noopener">Svensk Betong, Vägledning klimatförbättrad betong, utgåva 2</a> · <a href="https://www.boverket.se/sv/klimatdeklaration/klimatdatabas/" target="_blank" rel="noopener">Boverkets klimatdatabas</a>. Frågor: <a href="mailto:filip@bjornstjerna.se">filip@bjornstjerna.se</a></p>
 </div></div>
 `;
