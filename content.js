@@ -4,8 +4,8 @@ export const LANDING = `
 <section class="hero"><div class="wrap hero-in">
   <div class="hero-txt">
     <p class="kick">Marknadsplatsen för betongelement</p>
-    <h1 class="big">Fler fabriker att välja bland, närmare ert projekt</h1>
-    <p class="lead">Få svar från prefabfabriker ni kanske aldrig har anlitat, eller inte har jobbat med på länge. En fabrik närmare projektet betyder lägre transportkostnad och mindre CO2. Varje svar visar också fabrikens klimatnivå, EPD och elementens CO2, så att ni hittar en leverantör som är nära och möter era miljökrav. Vid samma pris vinner miljön.</p>
+    <h1 class="big">Betongelement nära ert projekt, från en fabrik som möter era miljökrav</h1>
+    <p class="lead">Fler fabriker att välja bland. Få svar från prefabfabriker ni kanske aldrig har anlitat, eller inte har jobbat med på länge. En fabrik närmare projektet betyder lägre transportkostnad och mindre CO2. Varje svar visar också fabrikens klimatnivå, EPD och elementens CO2, så att ni hittar en leverantör som är nära och möter era miljökrav. Vid samma pris vinner miljön.</p>
     <p class="lead">Väggar och socklar från närmaste fabrik. Balkonger och trappor från specialister i Sverige, Danmark och Polen. Plattbärlag och håldäck till bästa pris levererat.</p>
     <p class="free">Alltid gratis för köpare. Har ni en fabrik? Nå köpare ni inte har i dag, gratis till augusti 2027.</p>
   </div>
@@ -52,7 +52,7 @@ export const LANDING = `
   <p class="lead2">Som branschen redan arbetar: först ett ungefärligt pris på en grov beskrivning, sedan fast pris på ritningarna. Bara snabbare och till fler fabriker.</p>
   <div class="steps">
     <div><b>1</b><h3 class="h4">Köparen frågar</h3><p>Produkt med enkel kravställning, mängd i m² eller löpmeter, ungefärligt antal element, projektets adress, leveransveckor och klimatkrav om ni har.</p></div>
-    <div><b>2</b><h3 class="h4">Fabrikerna svarar</h3><p>Anonymt: kan helt, delvis eller nej, ungefärligt pris, transport, leveransveckor och klimatnivå.</p></div>
+    <div><b>2</b><h3 class="h4">Fabrikerna svarar</h3><p>Anonymt: kan helt, delvis eller nej, ungefärligt pris, transport och fordon, leveransveckor och klimatnivå.</p></div>
     <div><b>3</b><h3 class="h4">Köparen väljer</h3><p>Då släpps namn och kontaktuppgifter åt båda håll och ritningarna går till fabriken.</p></div>
     <div><b>4</b><h3 class="h4">Fast offert</h3><p>Fabriken räknar på ritningarna. Affären görs direkt mellan parterna.</p></div>
   </div>
@@ -86,7 +86,7 @@ export const LANDING = `
       <ol>
         <li><b>Fabriken lägger in sin EPD</b> per produkt: klimatpåverkan för tillverkningen (A1–A3) i kg CO2e per ton, m³ eller m², registreringsnummer och länk.</li>
         <li><b>Slotcast räknar om</b> till hela ordern, med elementens tjocklek och vikt.</li>
-        <li><b>Transporten läggs till</b> (A4), så att köparen ser CO2 för element, transport och totalt.</li>
+        <li><b>Transporten läggs till</b> (A4) med vägavstånd och fabrikens fordon, diesel, HVO100, biogas eller el, enligt Boverkets klimatdatabas. Köparen ser CO2 för element, transport och totalt.</li>
         <li><b>Utan EPD</b> används Boverkets generiska värde, märkt "generiskt". Det ligger cirka 25 % över medel, så en egen EPD lönar sig.</li>
       </ol>
       <p class="sub">Klimatnivåerna följer Svensk Betongs vägledning för klimatförbättrad betong: nivå 1–4 är 10–40 % lägre klimatpåverkan än branschreferensen, nivå 5 är halverad.</p>
@@ -127,6 +127,8 @@ export const LANDING = `
   <details><summary>Hur snabbt kan elementen levereras?</summary><p>Det avgör fabriken. Fabriker behöver oftast tillverkningsritningar 6–8 veckor före produktion, så akuta förfrågningar fungerar bäst när ritningarna är klara.</p></details>
   <details><summary>Vem ansvarar för transporten?</summary><p>Köparen och fabriken, som i dag. Fabriken anger sin transportkostnad i svaret; lämnas den tom visas priset exklusive transport. Köparen ser km och transportens CO2 för varje svar.</p></details>
   <details><summary>Hur visas klimatpåverkan?</summary><p>Varje svar visar CO2 för element (ur fabrikens EPD), transport och totalt, fabrikens klimatnivå och om den har EPD, oavsett om köparen har ställt krav. Vid samma pris hamnar lägst CO2 totalt först. Köparen kan också ange lägsta klimatnivå och om EPD krävs.</p></details>
+  <details><summary>Hur räknas avståndet?</summary><p>Som vägavstånd för lastbil mellan fabrikens adress och projektets adress, från en karttjänst. Saknas adressen räknas avståndet från orten.</p></details>
+  <details><summary>Kan vi ladda upp ritningar?</summary><p>Uppladdning av ritningar och underlag kommer snart. Tills vidare skickar ni underlaget direkt till fabriken när ni har valt den.</p></details>
   <details><summary>Måste fabriken ha en EPD?</summary><p>Nej. Utan EPD används Boverkets generiska värde, som är satt cirka 25 % över medel. Med en egen EPD syns fabrikens verkliga, oftast lägre, klimatpåverkan, och köparen kan föra över siffran till sin klimatdeklaration.</p></details>
 </section>
 
