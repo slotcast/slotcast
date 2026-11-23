@@ -1,6 +1,6 @@
 import { createClient } from './supabase.js';
 import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
-import { LANDING, POLICY } from './content.js';
+import { LANDING, POLICY, GUIDE } from './content.js';
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -24,10 +24,12 @@ const SUBS = {'Plattbärlag':['Filigran','Massiv (RD-platta)']};
 const SUBMM = {'Filigran':50,'Massiv (RD-platta)':200};
 const subOf = l => SUBS[l.product] ? (SUBS[l.product].find(x => (l.spec || '').startsWith(x)) || SUBS[l.product][0]) : null;
 // Transportens CO2 enligt Boverkets klimatdatabas: lastbil 1 MJ per tonkm inklusive tom retur, gånger bränslets klimatdata (kg CO2e/MJ)
-const VEH = { diesel: { t: 'Diesel', f: 0.0899 }, hvo: { t: 'HVO100', f: 0.016 }, biogas: { t: 'Biogas/fordonsgas', f: 0.0007 }, el: { t: 'El', f: 0.037 / 3.6 } };
+// Valet i svaret: Diesel eller Fossilfri transport, och för fossilfri även typ (behövs för CO2)
+const VEH = { diesel: { t: 'Diesel', f: 0.0899 }, hvo: { t: 'Fossilfri transport (HVO100)', s: 'HVO100', f: 0.016 }, biogas: { t: 'Fossilfri transport (biogas)', s: 'Biogas', f: 0.0007 }, el: { t: 'Fossilfri transport (el)', s: 'El', f: 0.037 / 3.6 } };
 const MJ_PER_TONKM = 1;
 const trCO2 = (kmv, ton, v) => kmv ? Math.round(kmv * ton * MJ_PER_TONKM * (VEH[v] || VEH.diesel).f / 100) / 10 : null;
-const vehOpts = sel => Object.entries(VEH).map(([k, v]) => `<option value="${k}" ${(sel || 'diesel') === k ? 'selected' : ''}>${v.t}</option>`).join('');
+const vehOpt = (k, sel) => `<option value="${k}" ${(sel || 'diesel') === k ? 'selected' : ''}>${VEH[k].s || VEH[k].t}</option>`;
+const vehOpts = sel => vehOpt('diesel', sel) + `<optgroup label="Fossilfri transport">${['hvo', 'biogas', 'el'].map(k => vehOpt(k, sel)).join('')}</optgroup>`;
 const KIND = { snabb: 'Snabb leverans', offert: 'Traditionell offert' };
 // Karttjänst (OpenRouteService) via Supabase-funktionen "karta"; utan svar används fågelvägen gånger 1,3
 const kmCache = {};
@@ -37,14 +39,24 @@ const STAIRS_PER_LOAD = 5, LOAD_TON = 20; // trappor tar plats snarare än vikt:
 const LAYERED = ['Sandwichvägg','Sockel'], WALLS = ['Sandwichvägg','Massiv vägg','Sockel'];
 const ROLES = {fabrik:'Fabrik', kopare:'Köpare', bada:'Fabrik och köpare'};
 const STATUS = {ny:'Ny', verifierad:'Verifierad', avstangd:'Avstängd'};
-// Klimat: Svensk Betongs nivåer för klimatförbättrad betong (nivå 1–4 = 10–40 % under branschreferensen, nivå 5 = halverad)
-const LVL = [['', 'Ej angivet'], ['0', 'Typvärde, ingen klimatförbättring'], ['1', 'Nivå 1 (−10 %)'], ['2', 'Nivå 2 (−20 %)'], ['3', 'Nivå 3 (−30 %)'], ['4', 'Nivå 4 (−40 %)'], ['5', 'Nivå 5 (−50 %)']];
-const lvlOpts = sel => LVL.map(([v, t]) => `<option value="${v}" ${String(sel ?? '') === v ? 'selected' : ''}>${t}</option>`).join('');
+// Klimat: Svensk Betongs nivåer för klimatförbättrad betong (nivå 1–4 = 10–40 % under typvärdet, nivå 5 = halverad, nivå 6 = 60 % lägre).
+// Nivån räknas fram ur fabrikens EPD-värde; utan EPD finns ingen nivå.
+const LVL = [['', 'Ej angivet'], ['0', 'Typvärde, ingen klimatförbättring'], ['1', 'Nivå 1 (−10 %)'], ['2', 'Nivå 2 (−20 %)'], ['3', 'Nivå 3 (−30 %)'], ['4', 'Nivå 4 (−40 %)'], ['5', 'Nivå 5 (−50 %)'], ['6', 'Nivå 6 (−60 %)']];
+const lvlOpts = (sel, max) => LVL.filter(([v]) => v === '' || max == null || +v <= max).map(([v, t]) => `<option value="${v}" ${String(sel ?? '') === v ? 'selected' : ''}>${t}</option>`).join('');
 const lvlTxt = v => v === '' || v == null ? 'Ej angivet' : (+v ? 'Nivå ' + v : 'Typvärde');
-const reqOpts = sel => [['0', 'Inget krav'], ['1', 'Nivå 1 eller bättre'], ['2', 'Nivå 2 eller bättre'], ['3', 'Nivå 3 eller bättre'], ['4', 'Nivå 4 eller bättre'], ['5', 'Nivå 5']].map(([v, t]) => `<option value="${v}" ${String(+sel || 0) === v ? 'selected' : ''}>${t}</option>`).join('');
+const reqOpts = sel => [['0', 'Inget krav'], ['1', 'Nivå 1 eller bättre'], ['2', 'Nivå 2 eller bättre'], ['3', 'Nivå 3 eller bättre'], ['4', 'Nivå 4 eller bättre'], ['5', 'Nivå 5 eller bättre'], ['6', 'Nivå 6']].map(([v, t]) => `<option value="${v}" ${String(+sel || 0) === v ? 'selected' : ''}>${t}</option>`).join('');
 const GWPU = { ton: 'per ton', m3: 'per m³', m2: 'per m²' };
-// Boverkets generiska värden per produkt (kg CO2e per ton, A1–A3, konservativa). Läggs in när värdena är hämtade.
-const GEN = {};
+// Typvärden per produkt, kg CO2e per ton A1–A3 (Svensk Betong, Vägledning klimatförbättrad betong utg. 2, tabell 3).
+// Massiv vägg = Väggar (RV), sockel räknas som sandwichvägg, plattbärlag (filigran och RD-platta) = 185.
+const TYP = { 'Sandwichvägg': 235, 'Massiv vägg': 155, 'Sockel': 235, 'Plattbärlag': 185, 'Håldäck': 135, 'Balkong': 210, 'Trappa': 210 };
+// Boverkets generiska värde utan EPD: typvärdet gånger 1,25 (konservativt).
+const GEN = Object.fromEntries(Object.entries(TYP).map(([p, v]) => [p, Math.round(v * 1.25)]));
+const ISO = ['9001', '14001', '45001'];
+const ISOT = { '9001': 'ISO 9001 kvalitet', '14001': 'ISO 14001 miljö', '45001': 'ISO 45001 arbetsmiljö' };
+// EPD-värde omräknat till kg CO2e per ton (betong cirka 2,4 ton per m³)
+const perTonEPD = (p, v, u) => !(v > 0) ? null : u === 'ton' ? v : u === 'm3' ? v / 2.4 : p === 'Trappa' ? null : v / ((MM[p] || 200) / 1000 * 2.4);
+// Nivå ur EPD: andel under typvärdet, avrundat nedåt till hela tiotal procent (0 = typvärde, max 6); null utan EPD
+const calcLvl = (p, v, u) => { const t = perTonEPD(p, v, u); if (t == null || !TYP[p]) return null; const r = 1 - t / TYP[p]; return r < 0.1 ? 0 : Math.min(6, Math.floor(r * 10 + 1e-9)); };
 const concMm = l => LAYERED.includes(l.product) ? ((+l.t1 || 0) + (+l.t3 || 0)) || MM[l.product] : (+l.concrete_mm || MM[l.product] || 200);
 // Elementens CO2 i ton för en mängd q, ur svarets EPD-värde eller Boverkets generiska värde
 function elCO2(a, l, q) {
@@ -166,7 +178,7 @@ function authCard() {
 
 function vPolicy() {
   if (!S.session) { $('nav').innerHTML = ''; $('who').innerHTML = ''; }
-  app.innerHTML = POLICY; window.scrollTo(0, 0);
+  app.innerHTML = location.hash === '#vagledning' ? GUIDE : POLICY; window.scrollTo(0, 0);
 }
 
 function vRecovery() {
@@ -188,11 +200,11 @@ function views() {
 }
 function go(v, keep) { if (!keep) S.editReq = null; S.view = v; S.flash = ''; location.hash = v; render(); }
 
-window.addEventListener('hashchange', () => { if (location.hash === '#integritet' || S.policy) render(); });
+window.addEventListener('hashchange', () => { if (location.hash === '#integritet' || location.hash === '#vagledning' || S.policy) render(); });
 
 function render() {
   app.classList.remove('full');
-  S.policy = location.hash === '#integritet';
+  S.policy = location.hash === '#integritet' || location.hash === '#vagledning';
   if (S.policy) return vPolicy();
   if (S.recovery) return vRecovery();
   if (!S.session) return vAuth();
@@ -224,21 +236,27 @@ async function vProfile(el) {
   <div class="row" style="margin-top:10px"><div><label for="adr">Fabrikens adress (gata, ort), för vägavstånd</label><input id="adr" value="${esc(o.address || '')}" placeholder="t.ex. Industrigatan 4, Motala"><div class="sub">${o.lat ? 'Hittad på kartan' : o.address ? 'Inte hittad på kartan än; avstånd räknas från orten' : 'Utan adress räknas avståndet från orten'}</div></div></div>
   <div id="fx2" class="line"><h3>Fabrik</h3><label style="margin-top:8px">Produkter ni tillverkar</label>
   <div>${PRODUCTS.map(x => `<label class="chk"><input type="checkbox" class="pr" value="${esc(x)}" ${(o.products || []).includes(x) ? 'checked' : ''}>${esc(x)}</label>`).join('')}</div>
-  <h3 style="margin-top:16px">Klimat</h3>
-  <p class="sub" style="margin:4px 0 8px">Visa era miljöinvesteringar. Klimatnivå, EPD och elementens CO2 syns för alla köpare i varje svar, och vid samma pris vinner fabriken med lägst klimatpåverkan. Ta klimatpåverkan för tillverkningen (A1–A3, raden GWP-GHG, annars GWP-total) ur er EPD. Nivåerna följer Svensk Betongs vägledning för klimatförbättrad betong. Utan EPD används Boverkets generiska värde, som ligger cirka 25 % över medel.</p>
-  <div class="scroll"><table><thead><tr><th>Produkt</th><th>Klimatnivå</th><th>Klimatpåverkan A1–A3, kg CO2e</th><th>Enhet</th><th>EPD-registreringsnummer</th><th>Länk till EPD</th></tr></thead><tbody>
-  ${PRODUCTS.map(x => { const g = (o.climate || {})[x] || {}; return `<tr class="gw" data-p="${esc(x)}"><td>${esc(x)}</td><td><select class="cl">${lvlOpts(g.lvl)}</select></td><td><input class="gv" type="number" min="0" step="0.1" value="${esc(g.v ?? '')}" placeholder="t.ex. 250"></td><td><select class="gu" style="min-width:110px">${Object.entries(GWPU).map(([k, t]) => `<option value="${k}" ${(g.u || 'ton') === k ? 'selected' : ''}>${t}</option>`).join('')}</select></td><td><input class="gr" value="${esc(g.reg || '')}" placeholder="t.ex. EPD-IES-0012345"></td><td><input class="gl" value="${esc(g.link || '')}" placeholder="https://"></td></tr>`; }).join('')}
+  <h3 style="margin-top:16px">Certifiering</h3>
+  <div>${ISO.map(x => `<label class="chk"><input type="checkbox" class="iso" value="${x}" ${(o.iso || []).includes(x) ? 'checked' : ''}>${ISOT[x]}</label>`).join('')}</div>
+  <p class="sub" style="margin:4px 0 0">Visas för köparen i era svar.</p>
+  <h3 style="margin-top:16px">Klimat (frivilligt)</h3>
+  <p class="sub" style="margin:4px 0 8px">Har ni en EPD? Fyll i klimatpåverkan för tillverkningen (A1–A3, raden GWP-GHG, annars GWP-total), helst per ton. Slotcast räknar fram er klimatnivå enligt Svensk Betongs vägledning. Har ni ingen EPD kan ni lämna raden tom; då visas Boverkets generiska värde för produkten. <a href="#vagledning" target="_blank" rel="noopener">Hur får vi en EPD? Läs vägledningen.</a></p>
+  <div class="scroll"><table><thead><tr><th>Produkt</th><th>Klimatpåverkan A1–A3, kg CO2e</th><th>Enhet</th><th>Klimatnivå</th><th class="num">Typvärde / generiskt, kg per ton</th><th>EPD-registreringsnummer</th><th>Länk till EPD</th></tr></thead><tbody>
+  ${PRODUCTS.map(x => { const g = (o.climate || {})[x] || {}; return `<tr class="gw" data-p="${esc(x)}"><td>${esc(x)}</td><td><input class="gv" type="number" min="0" step="0.1" value="${esc(g.v ?? '')}" placeholder="tomt = generiskt"></td><td><select class="gu" style="min-width:110px">${Object.entries(GWPU).map(([k, t]) => `<option value="${k}" ${(g.u || 'ton') === k ? 'selected' : ''}>${t}</option>`).join('')}</select></td><td class="cl"></td><td class="num sub">${TYP[x]} / ${GEN[x]}</td><td><input class="gr" value="${esc(g.reg || '')}" placeholder="t.ex. EPD-IES-0012345"></td><td><input class="gl" value="${esc(g.link || '')}" placeholder="https://"></td></tr>`; }).join('')}
   </tbody></table></div>
-  <p class="sub" style="margin:6px 0 0">Fyll i för de produkter ni tillverkar. Länken visas för köparen när ni har valts.</p>
+  <p class="sub" style="margin:6px 0 0">Typvärdet är vad en vanlig betong av produkten brukar ha. Generiskt värde är typvärdet plus 25 % och används när EPD saknas. Länken till er EPD visas för köparen när ni har valts.</p>
   <div style="display:none"><input id="t30" type="number" value="${esc(o.t30)}"><input id="t300" type="number" value="${esc(o.t300)}"></div></div>
   <div id="perr" class="err"></div><p><button class="btn" id="psave">Spara profil</button></p></div>
   <div class="card"><h3>Lösenord</h3><div class="row" style="margin-top:8px"><div><label for="np2">Nytt lösenord</label><input id="np2" type="password" autocomplete="new-password"></div></div><div id="pwerr" class="err"></div><p><button class="btn2" id="pwsave">Byt lösenord</button></p></div>`;
   const tog = () => { const r = el.querySelector('input[name=role]:checked').value; $('fx2').style.display = r !== 'kopare' ? '' : 'none'; };
   el.querySelectorAll('input[name=role]').forEach(r => r.onchange = tog); tog();
+  const showLvl = r => { const v = +String(r.querySelector('.gv').value).replace(',', '.'), lv = calcLvl(r.dataset.p, v, r.querySelector('.gu').value); r.querySelector('.cl').innerHTML = lv == null ? '<span class="sub">Generiskt</span>' : `<b>${esc(lvlTxt(lv))}</b>`; };
+  el.querySelectorAll('.gw').forEach(r => { showLvl(r); r.querySelector('.gv').oninput = () => showLvl(r); r.querySelector('.gu').onchange = () => showLvl(r); });
   $('psave').onclick = async () => {
     const role = el.querySelector('input[name=role]:checked').value, products = [...el.querySelectorAll('.pr:checked')].map(x => x.value), e = $('perr');
-    const climate = {}; el.querySelectorAll('.gw').forEach(r => { const q = c => r.querySelector(c); const v = +String(q('.gv').value).replace(',', '.'); const g = { lvl: q('.cl').value, v: v > 0 ? v : null, u: q('.gu').value, reg: q('.gr').value.trim(), link: q('.gl').value.trim() }; if (g.lvl !== '' || g.v || g.reg || g.link) climate[r.dataset.p] = g; });
-    const d = { role, name: val('co'), contact_name: val('ct'), phone: val('ph'), email: val('em'), city: val('cy') || null, products, t30: +val('t30') || 120, t300: +val('t300') || 342, climate };
+    const climate = {}; el.querySelectorAll('.gw').forEach(r => { const q = c => r.querySelector(c); const v = +String(q('.gv').value).replace(',', '.'); const u = q('.gu').value, lv = calcLvl(r.dataset.p, v, u); const g = { lvl: lv == null ? '' : String(lv), v: v > 0 ? v : null, u, reg: q('.gr').value.trim(), link: q('.gl').value.trim() }; if (g.v || g.reg || g.link) climate[r.dataset.p] = g; });
+    const iso = [...el.querySelectorAll('.iso:checked')].map(x => x.value);
+    const d = { role, name: val('co'), contact_name: val('ct'), phone: val('ph'), email: val('em'), city: val('cy') || null, products, t30: +val('t30') || 120, t300: +val('t300') || 342, climate, iso };
     if (!d.name) { e.textContent = 'Skriv företagets namn.'; return; }
     d.address = val('adr') || null;
     if (d.address !== (o.address || null) || (d.address && !o.lat)) { const g = await geocode(d.address); d.lat = g?.lat ?? null; d.lng = g?.lng ?? null; }
@@ -389,7 +407,7 @@ async function vMine(el) {
       const label = (a, i) => l.chosen_org_id === a.factory_org_id ? esc(org(a.factory_org_id).name || 'Fabrik') : 'Fabrik ' + String.fromCharCode(65 + i);
       h += `<div class="line"><h3>${lineText(l)}</h3><p class="sub" style="margin:4px 0">${lineSub(l)} · ${yes.length} svar med pris, ${no} nej.</p>`;
       if (yes.length) h += `<div class="scroll"><table><thead><tr><th>Fabrik</th><th>Klarar</th><th class="num">kr/${U(l)} LOK</th><th class="num">Transport kr/${U(l)}</th><th class="num">Kr/${U(l)} levererat</th><th class="num">Totalt kr</th><th>Leverans</th><th class="num">km</th><th class="num">CO2 element, ton<br><span style="font-weight:500">(A1–A3)</span></th><th class="num">CO2 transport, ton<br><span style="font-weight:500">(A4)</span></th><th class="num">CO2 totalt, ton</th><th>Klimatnivå</th><th>EPD</th><th>Krav</th><th></th></tr></thead><tbody>
-        ${rows.map(x => { const a = x.a, isC = l.chosen_org_id === a.factory_org_id; return `<tr><td><b>${label(a, x.i)}</b><div class="sub">${isC ? esc(org(a.factory_org_id).city || '') : 'anonym'}</div>${isStale(a, l.edited_at || r.edited_at) ? '<span class="tag dev">Svar före er ändring</span>' : ''}${a.note ? `<div class="sub">”${esc(a.note)}”</div>` : ''}</td><td>${a.status === 'delvis' ? fmt(a.qty) + ' ' + U(l) : 'Hela'}</td><td class="num">${fmt(a.price)}</td><td class="num">${x.hasT ? fmt(x.tm2) + '<div class="sub">(Estimat)</div>' : '<span class="sub">ej angiven</span>'}</td><td class="num"><b>${fmt(x.del)}</b><div class="sub">${x.hasT ? '(Estimat)' : 'exkl. transport'}</div></td><td class="num">${fmt(x.del * x.share)}<div class="sub">(Estimat)</div></td><td>${wl(a.week_from)}–${wl(a.week_to)}</td><td class="num">${a.km != null ? fmt(a.km) : '–'}</td><td class="num">${x.el.t != null ? x.el.t.toLocaleString('sv-SE') : '–'}<div class="sub">${x.el.src}</div></td><td class="num">${x.co2 != null ? x.co2.toLocaleString('sv-SE') : '–'}<div class="sub">${esc((VEH[a.vehicle] || VEH.diesel).t)}</div></td><td class="num"><b>${x.tot != null ? x.tot.toLocaleString('sv-SE') : '–'}</b></td><td>${esc(lvlTxt(a.climate_level))}</td><td>${a.has_epd ? '<span class="tag ok">Ja</span>' : 'Nej'}</td><td>${x.dev.length ? '<span class="tag dev">' + esc(x.dev.join(', ')) + '</span>' : '<span class="tag ok">Uppfyller</span>'}</td><td>${l.chosen_org_id ? (isC ? '<span class="tag acc">Vald</span>' : '') : `<button class="btn2" data-pick="${l.id}|${a.factory_org_id}" data-name="${label(a, x.i)}">Välj</button>`}</td></tr>`; }).join('')}</tbody></table></div>`;
+        ${rows.map(x => { const a = x.a, isC = l.chosen_org_id === a.factory_org_id; return `<tr><td><b>${label(a, x.i)}</b><div class="sub">${isC ? esc(org(a.factory_org_id).city || '') : 'anonym'}</div>${isStale(a, l.edited_at || r.edited_at) ? '<span class="tag dev">Svar före er ändring</span>' : ''}${(a.iso || []).length ? `<div>${a.iso.map(i => `<span class="tag">ISO ${esc(i)}</span>`).join(' ')}</div>` : ''}${a.note ? `<div class="sub">”${esc(a.note)}”</div>` : ''}</td><td>${a.status === 'delvis' ? fmt(a.qty) + ' ' + U(l) : 'Hela'}</td><td class="num">${fmt(a.price)}</td><td class="num">${x.hasT ? fmt(x.tm2) + '<div class="sub">(Estimat)</div>' : '<span class="sub">ej angiven</span>'}</td><td class="num"><b>${fmt(x.del)}</b><div class="sub">${x.hasT ? '(Estimat)' : 'exkl. transport'}</div></td><td class="num">${fmt(x.del * x.share)}<div class="sub">(Estimat)</div></td><td>${wl(a.week_from)}–${wl(a.week_to)}</td><td class="num">${a.km != null ? fmt(a.km) : '–'}</td><td class="num">${x.el.t != null ? x.el.t.toLocaleString('sv-SE') : '–'}<div class="sub">${x.el.src === 'EPD' ? 'EPD' : 'generiskt (Boverket)'}</div></td><td class="num">${x.co2 != null ? x.co2.toLocaleString('sv-SE') : '–'}<div class="sub">${esc((VEH[a.vehicle] || VEH.diesel).t)}</div></td><td class="num"><b>${x.tot != null ? x.tot.toLocaleString('sv-SE') : '–'}</b></td><td>${esc(lvlTxt(a.climate_level))}</td><td>${a.has_epd ? '<span class="tag ok">Ja</span>' : '<span class="sub">Generiskt värde</span>'}</td><td>${x.dev.length ? '<span class="tag dev">' + esc(x.dev.join(', ')) + '</span>' : '<span class="tag ok">Uppfyller</span>'}</td><td>${l.chosen_org_id ? (isC ? '<span class="tag acc">Vald</span>' : '') : `<button class="btn2" data-pick="${l.id}|${a.factory_org_id}" data-name="${label(a, x.i)}">Välj</button>`}</td></tr>`; }).join('')}</tbody></table></div>`;
       else h += '<p class="sub">Inga svar ännu.</p>';
       if (l.chosen_org_id) {
         const f = org(l.chosen_org_id), a = ans.find(x => x.factory_org_id === l.chosen_org_id), of = a?.offers;
@@ -436,15 +454,15 @@ async function vInbox(el) {
     } else if (x.chosen_other) c += '<p class="sub">Köparen valde en annan fabrik för den här raden.</p>';
     else if (a && !stale && S.edit !== x.line_id) c += `<p>Ert svar: ${a.status === 'nej' ? '<b>Nej</b>' : `<b>${a.status === 'delvis' ? fmt(a.qty) + ' ' + U(l) : 'Hela mängden'}</b>, cirka ${fmt(a.price)} kr/${U(l)} LOK, transport ${a.transport != null ? fmt(a.transport) + ' kr (estimat)' : 'ej angiven'}, ${esc(lvlTxt(a.climate_level))}, ${wl(a.week_from)}–${wl(a.week_to)}`}. <button class="lnk" data-edit="${x.line_id}">Ändra svar</button></p>`;
     else {
-      const myC = (o.climate || {})[l.product] || {};
-      const d = a ? { ...a } : { status: 'helt', qty: l.qty, price: '', transport: '', week_from: x.first_week, week_to: x.last_week, note: '', climate_level: myC.lvl ?? '' };
+      const myC = (o.climate || {})[l.product] || {}, myMax = calcLvl(l.product, +myC.v, myC.u || 'ton');
+      const d = a ? { ...a } : { status: 'helt', qty: l.qty, price: '', transport: '', week_from: x.first_week, week_to: x.last_week, note: '', climate_level: myMax ?? '' };
       const k = x.line_id;
       c += `<div class="row" style="margin-top:8px"><div><label>Svar</label><select id="st${k}" data-k="${k}" class="stsel"><option value="helt" ${d.status === 'helt' ? 'selected' : ''}>Kan hela mängden</option><option value="delvis" ${d.status === 'delvis' ? 'selected' : ''}>Kan delvis</option><option value="nej" ${d.status === 'nej' ? 'selected' : ''}>Nej</option></select></div>
       <div><label>Mängd vid delvis, ${U(l)}</label><input id="m2${k}" data-k="${k}" class="m2in" type="number" value="${esc(d.qty ?? l.qty)}"></div>
       <div><label>Ungefärligt pris, kr/${U(l)} LOK</label><input id="pr${k}" type="number" min="1" value="${esc(d.price)}"></div>
       <div><label>Transport, kr totalt (estimat)</label><input id="tr${k}" type="number" min="0" placeholder="${tr ? 't.ex. ' + fmt(tr.kr) : ''}" value="${esc(d.transport ?? '')}"><div class="sub" id="tri${k}">${tr ? trInfo(o, l, tr) : 'Välj fabrikens ort i profilen för att se avstånd och ett exempel'}</div></div>
       <div><label>Transport med</label><select id="ve${k}">${vehOpts(d.vehicle)}</select><div class="sub">För transportens CO2 (Boverket)</div></div>
-      <div><label>Klimatnivå i svaret</label><select id="lv${k}">${lvlOpts(d.climate_level)}</select><div class="sub">${myC.v ? 'EPD: ' + fmt(myC.v) + ' kg CO2e ' + GWPU[myC.u || 'ton'] : 'Ingen EPD-siffra i profilen'}</div></div></div>
+      <div><label>Klimatnivå i svaret</label><select id="lv${k}">${lvlOpts(d.climate_level, myMax ?? 0)}</select><div class="sub">${myC.v ? 'EPD: ' + fmt(myC.v) + ' kg CO2e ' + GWPU[myC.u || 'ton'] + ', högst ' + lvlTxt(myMax).toLowerCase() : 'Ingen EPD i profilen, så elementens CO2 visas med generiskt värde'}</div></div></div>
       <div class="row" style="margin-top:10px"><div><label>Första leverans</label><select id="wf${k}">${weekOpts(d.week_from)}</select></div><div><label>Sista leverans</label><select id="wt${k}">${weekOpts(d.week_to)}</select></div><div style="flex-basis:300px"><label>Kommentar till köparen (valfri)</label><input id="no${k}" value="${esc(d.note || '')}"></div></div>
       <div class="err" id="ae${k}"></div><p><button class="btn" data-ans="${k}">Skicka svar</button>${a ? ' <button class="lnk" data-edit="">Avbryt</button>' : ''}</p>`;
     }
@@ -461,7 +479,7 @@ async function vInbox(el) {
   el.querySelectorAll('[data-ans]').forEach(b => b.onclick = async () => {
     const k = b.dataset.ans, x = find(k), e = $('ae' + k), st = val('st' + k);
     const myC = (o.climate || {})[x.product] || {};
-    const d = { line_id: k, factory_org_id: o.id, status: st, qty: st === 'delvis' ? +val('m2' + k) : null, price: st === 'nej' ? null : +val('pr' + k), transport: st === 'nej' || val('tr' + k) === '' ? null : +val('tr' + k), climate_level: val('lv' + k) === '' ? null : +val('lv' + k), has_epd: !!(myC.v || myC.reg), gwp_value: myC.v || null, gwp_unit: myC.v ? (myC.u || 'ton') : null, vehicle: val('ve' + k) || 'diesel', week_from: st === 'nej' ? null : +val('wf' + k), week_to: st === 'nej' ? null : +val('wt' + k), note: val('no' + k) || null, km: transport(o, x, x.qty, x.city, road[x.line_id])?.km ?? null };
+    const d = { line_id: k, factory_org_id: o.id, status: st, qty: st === 'delvis' ? +val('m2' + k) : null, price: st === 'nej' ? null : +val('pr' + k), transport: st === 'nej' || val('tr' + k) === '' ? null : +val('tr' + k), climate_level: val('lv' + k) === '' ? null : Math.min(+val('lv' + k), calcLvl(x.product, +myC.v, myC.u || 'ton') ?? 0), iso: o.iso || [], has_epd: !!(myC.v || myC.reg), gwp_value: myC.v || null, gwp_unit: myC.v ? (myC.u || 'ton') : null, vehicle: val('ve' + k) || 'diesel', week_from: st === 'nej' ? null : +val('wf' + k), week_to: st === 'nej' ? null : +val('wt' + k), note: val('no' + k) || null, km: transport(o, x, x.qty, x.city, road[x.line_id])?.km ?? null };
     if (st !== 'nej') { if (!(d.price > 0)) { e.textContent = 'Ange ungefärligt pris.'; return; } if (d.transport != null && !(d.transport >= 0)) { e.textContent = 'Transporten kan inte vara negativ.'; return; } if (d.week_to < d.week_from) { e.textContent = 'Sista leverans kan inte vara före första.'; return; } }
     if (st === 'delvis' && !(d.qty > 0 && d.qty < x.qty)) { e.textContent = 'Ange en mängd som är mindre än hela.'; return; }
     b.disabled = true;
@@ -496,7 +514,7 @@ async function vAdmin(el) {
   <div class="card stat"><div><b>${O.length}</b>företag</div><div><b>${O.filter(isFactory).length}</b>fabriker</div><div><b>${O.filter(isBuyer).length}</b>köpare</div><div><b>${nNew}</b>att verifiera</div><div><b>${live.length}</b>förfrågningar</div><div><b>${(A || []).filter(a => a.status !== 'nej').length}</b>svar med pris</div><div><b>${(L || []).filter(l => l.chosen_org_id).length}</b>valda fabriker</div><div><b>${(L || []).filter(l => l.outcome === 'affar').length}</b>affärer</div></div>
   <div class="card"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px"><h2>Företag</h2><select id="af" style="width:auto">${['alla', 'ny', 'verifierad', 'avstangd'].map(k => `<option value="${k}" ${f === k ? 'selected' : ''}>${k === 'alla' ? 'Alla' : STATUS[k]}</option>`).join('')}</select></div>
   <div class="scroll"><table><thead><tr><th>Företag</th><th>Roll</th><th>Ort</th><th>Kontakt</th><th>Produkter</th><th>Registrerad</th><th>Status</th><th></th></tr></thead><tbody>
-  ${list.map(o => { const users = (P || []).filter(p => p.org_id === o.id); return `<tr><td><b>${esc(o.name)}</b><div class="sub">${users.map(u => esc(u.email)).join(', ')}</div></td><td>${ROLES[o.role]}</td><td>${esc(o.city || '–')}</td><td>${esc(o.contact_name || '')}<div class="sub">${esc(o.phone || '')}</div></td><td class="sub">${esc((o.products || []).join(', '))}${Object.entries(o.climate || {}).some(([, g]) => g.v || g.reg) ? '<div><span class="tag ok">EPD: ' + esc(Object.entries(o.climate).filter(([, g]) => g.v || g.reg).map(([p]) => p).join(', ')) + '</span></div>' : ''}</td><td>${day(o.created_at)}</td><td><span class="tag ${o.status === 'verifierad' ? 'ok' : o.status === 'avstangd' ? 'dev' : ''}">${STATUS[o.status]}</span></td>
+  ${list.map(o => { const users = (P || []).filter(p => p.org_id === o.id); return `<tr><td><b>${esc(o.name)}</b><div class="sub">${users.map(u => esc(u.email)).join(', ')}</div></td><td>${ROLES[o.role]}</td><td>${esc(o.city || '–')}</td><td>${esc(o.contact_name || '')}<div class="sub">${esc(o.phone || '')}</div></td><td class="sub">${esc((o.products || []).join(', '))}${Object.entries(o.climate || {}).some(([, g]) => g.v || g.reg) ? '<div><span class="tag ok">EPD: ' + esc(Object.entries(o.climate).filter(([, g]) => g.v || g.reg).map(([p]) => p).join(', ')) + '</span></div>' : ''}${(o.iso || []).length ? '<div><span class="tag">ISO ' + esc(o.iso.join(', ')) + '</span></div>' : ''}</td><td>${day(o.created_at)}</td><td><span class="tag ${o.status === 'verifierad' ? 'ok' : o.status === 'avstangd' ? 'dev' : ''}">${STATUS[o.status]}</span></td>
   <td style="white-space:nowrap">${o.status !== 'verifierad' ? `<button class="btn2" data-st="${o.id}|verifierad">Verifiera</button> ` : ''}${o.status !== 'avstangd' && o.id !== S.org.id ? `<button class="lnk" data-st="${o.id}|avstangd">Stäng av</button>` : ''}${o.status === 'avstangd' ? `<button class="lnk" data-st="${o.id}|ny">Återaktivera</button>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="8" class="sub">Inga företag.</td></tr>'}
   </tbody></table></div></div>
   <div class="card"><h2>Senaste förfrågningar</h2><div class="scroll"><table><thead><tr><th>Datum</th><th>Köpare</th><th>Ort</th><th>Rader</th><th class="num">Svar</th><th>Status</th></tr></thead><tbody>
