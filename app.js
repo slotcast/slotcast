@@ -196,6 +196,7 @@ function views() {
   if (isFactory(o)) { v.push(['inkorg', 'Förfrågningar']); v.push(['kapacitet', 'Ledig kapacitet']); }
   v.push(['profil', 'Företagsprofil']);
   if (S.profile?.is_admin) v.push(['admin', 'Admin']);
+  if (S.profile?.is_admin && S.editReq?._admin && !v.some(x => x[0] === 'ny')) v.push(['ny', 'Rätta förfrågan']);
   return v;
 }
 function go(v, keep) { if (!keep) S.editReq = null; S.view = v; S.flash = ''; location.hash = v; render(); }
@@ -294,10 +295,19 @@ async function vCap(el) {
   el.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { if (!confirm('Ta bort den lediga kapaciteten?')) return; const { error } = await sb.from('slots').delete().eq('id', b.dataset.del); if (error) return flash(errText(error)); render(); });
 }
 
+// ---------- Volymkontroll ----------
+// Under 100 m² eller över 4 000 m² på någon produktrad: förfrågan väntar på granskning innan fabrikerna ser den.
+// Databasen sätter flaggan; här ber vi bara funktionen "granskning" mejla admin. Köparen får inget besked.
+const REVIEW_MIN = 100, REVIEW_MAX = 4000;
+const lineM2 = l => l.unit === 'lm' ? (l.height_mm > 0 ? l.qty * l.height_mm / 1000 : null) : l.unit === 'st' ? null : +l.qty;
+const outside = l => { const a = lineM2(l); return a != null && (a < REVIEW_MIN || a > REVIEW_MAX); };
+const review = id => { sb.functions.invoke('granskning', { body: { request_id: id } }).catch(() => {}); };
+const REVIEW = { ok: '', granskas: 'Granskas', godkand: 'Godkänd', avbojd: 'Avböjd' };
+
 // ---------- Köpare: ny förfrågan ----------
 async function vNew(el) {
   const R0 = S.editReq || null;
-  el.innerHTML = `<h1>${R0 ? 'Ändra förfrågan' : 'Ny förfrågan'}</h1><div class="card">${R0 ? '<div class="note">Fabriker som redan har svarat ser att förfrågan är uppdaterad och ombeds kontrollera sitt svar. Rader där ni har valt fabrik är låsta.</div>' : ''}
+  el.innerHTML = `<h1>${R0 ? (R0._admin ? 'Rätta förfrågan' : 'Ändra förfrågan') : 'Ny förfrågan'}</h1><div class="card">${R0?._admin ? '<div class="note"><b>Admin:</b> ni rättar köparens förfrågan. Den publiceras inte förrän ni godkänner den under Admin. Köparen får inget besked.</div>' : ''}${R0 && !R0._admin ? '<div class="note">Fabriker som redan har svarat ser att förfrågan är uppdaterad och ombeds kontrollera sitt svar. Rader där ni har valt fabrik är låsta.</div>' : ''}
   <p class="sub" style="margin-top:0">En grov uppskattning räcker. Förfrågan går anonymt till fabriker som tillverkar produkterna. De svarar med ungefärligt pris, leveransveckor, transport och klimatnivå. När ni valt fabrik ser ni varandras namn och fabriken lämnar fast offert.</p>
   <div class="row" style="margin-bottom:6px"><div><label for="kind">Vad behöver ni?</label><select id="kind"><option value="snabb" ${R0?.kind === 'snabb' ? 'selected' : ''}>Snabb leverans: fabriker med ledig kapacitet</option><option value="offert" ${!R0 || R0.kind !== 'snabb' ? 'selected' : ''}>Traditionell offert: pris och närhet</option></select></div></div>
   <div id="lines"></div><button class="lnk" id="addl">+ Lägg till produktrad</button>
@@ -350,7 +360,7 @@ async function vNew(el) {
     if (R0.addr) $('addr').value = R0.addr; if (R0.city) $('dc').value = R0.city;
     if (WEEKS.includes(R0.first_week)) $('w1').value = R0.first_week; if (WEEKS.includes(R0.last_week)) $('w2').value = R0.last_week;
     $('all').value = R0.all_from_one ? '1' : '0'; if (R0.drawings) $('draw').value = R0.drawings;
-    $('cancel').onclick = () => go('mina');
+    $('cancel').onclick = () => go(R0._admin ? 'admin' : 'mina');
   } else add();
   $('addl').onclick = () => add(); $('w1').onchange = hint; $('w2').onchange = hint;
   $('send').onclick = async () => {
@@ -376,14 +386,15 @@ async function vNew(el) {
       const { error: h } = await sb.from('requests').update(head).eq('id', R0.id); if (h) return fail(h);
       for (const l of out) { const { _id, ...row } = l; const { error: x } = _id ? await sb.from('request_lines').update(row).eq('id', _id) : await sb.from('request_lines').insert({ ...row, request_id: R0.id }); if (x) return fail(x); }
       for (const id of removedIds) { const { error: x } = await sb.from('request_lines').update({ removed: true }).eq('id', id); if (x) return fail(x); }
-      S.editReq = null; S.view = 'mina'; location.hash = 'mina'; flash('Förfrågan är uppdaterad. Fabrikerna ser att den är ändrad.'); return;
+      if (R0._admin) { S.editReq = null; S.view = 'admin'; location.hash = 'admin'; flash('Förfrågan är rättad. Godkänn den under Väntar på granskning när den är klar.'); return; }
+      review(R0.id); S.editReq = null; S.view = 'mina'; location.hash = 'mina'; flash('Förfrågan är uppdaterad. Fabrikerna ser att den är ändrad.'); return;
     }
     out.forEach(l => delete l._id);
     const { data: r, error } = await sb.from('requests').insert({ buyer_org_id: S.org.id, created_by: S.session.user.id, ...head }).select().single();
     if (error) { $('send').disabled = false; e.textContent = errText(error); return; }
     const { error: e2 } = await sb.from('request_lines').insert(out.map(l => ({ ...l, request_id: r.id })));
     if (e2) { $('send').disabled = false; await sb.from('requests').delete().eq('id', r.id); e.textContent = errText(e2); return; }
-    S.view = 'mina'; flash('Förfrågan är skickad. Svaren dyker upp under Mina förfrågningar.');
+    review(r.id); S.view = 'mina'; flash('Förfrågan är skickad. Svaren dyker upp under Mina förfrågningar.');
   };
 }
 
@@ -502,7 +513,7 @@ async function vAdmin(el) {
   const [{ data: O }, { data: P }, { data: R }, { data: A }, { data: L }] = await Promise.all([
     sb.from('organizations').select('*').order('created_at', { ascending: false }),
     sb.from('profiles').select('id,org_id,email,full_name,created_at'),
-    sb.from('requests').select('id,buyer_org_id,city,created_at,deleted_at'),
+    sb.from('requests').select('*, request_lines(*)'),
     sb.from('answers').select('id,line_id,status'),
     sb.from('request_lines').select('id,request_id,product,qty,unit,chosen_org_id,outcome,removed')
   ]);
@@ -510,7 +521,14 @@ async function vAdmin(el) {
   const list = O.filter(o => f === 'alla' || o.status === f);
   const nNew = O.filter(o => o.status === 'ny').length;
   const live = (R || []).filter(r => !r.deleted_at);
-  el.innerHTML = `<h1>Admin</h1>
+  const waiting = live.filter(r => r.review === 'granskas').sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const nb = $('n-admin'); if (nb && waiting.length) { nb.textContent = waiting.length; nb.style.display = ''; }
+  const rv = waiting.length ? `<div class="card" style="border-color:#f79009"><h2>Väntar på granskning (${waiting.length})</h2><p class="sub" style="margin-top:0">Förfrågningar med under ${fmt(REVIEW_MIN)} m² eller över ${fmt(REVIEW_MAX)} m² på någon rad. Fabrikerna ser dem inte förrän ni godkänner. Köparen får inget besked.</p>
+  ${waiting.map(r => { const b = O.find(o => o.id === r.buyer_org_id) || {}; const ls = (r.request_lines || []).filter(l => !l.removed); return `<div class="line"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><h3>${esc(b.name || '')} · ${esc(r.city)}</h3><span class="sub">${day(r.created_at)}${r.review_notified_at ? ' · mejl skickat' : ' · <span class="tag dev">mejl ej skickat</span>'}</span></div>
+  <p class="sub" style="margin:4px 0">${esc(b.contact_name || '')}${b.phone ? ' · <a href="tel:' + esc(b.phone) + '">' + esc(b.phone) + '</a>' : ''}${b.email ? ' · <a href="mailto:' + esc(b.email) + '?subject=' + encodeURIComponent('Er förfrågan i Slotcast') + '">' + esc(b.email) + '</a>' : ''}</p>
+  ${ls.map(l => `<div>${lineText(l)}${l.unit === 'lm' && lineM2(l) != null ? ' (' + fmt(lineM2(l)) + ' m²)' : ''} ${outside(l) ? `<span class="tag dev">${lineM2(l) < REVIEW_MIN ? 'Under ' + fmt(REVIEW_MIN) : 'Över ' + fmt(REVIEW_MAX)} m²</span>` : ''}</div>`).join('')}
+  <p style="margin-top:8px"><button class="btn2" data-rv="${r.id}|godkand">Godkänn och publicera</button> <button class="btn2" data-rfix="${r.id}">Rätta</button> <button class="lnk" data-rv="${r.id}|avbojd">Avböj</button></p></div>`; }).join('')}</div>` : '';
+  el.innerHTML = `<h1>Admin</h1>${rv}
   <div class="card stat"><div><b>${O.length}</b>företag</div><div><b>${O.filter(isFactory).length}</b>fabriker</div><div><b>${O.filter(isBuyer).length}</b>köpare</div><div><b>${nNew}</b>att verifiera</div><div><b>${live.length}</b>förfrågningar</div><div><b>${(A || []).filter(a => a.status !== 'nej').length}</b>svar med pris</div><div><b>${(L || []).filter(l => l.chosen_org_id).length}</b>valda fabriker</div><div><b>${(L || []).filter(l => l.outcome === 'affar').length}</b>affärer</div></div>
   <div class="card"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px"><h2>Företag</h2><select id="af" style="width:auto">${['alla', 'ny', 'verifierad', 'avstangd'].map(k => `<option value="${k}" ${f === k ? 'selected' : ''}>${k === 'alla' ? 'Alla' : STATUS[k]}</option>`).join('')}</select></div>
   <div class="scroll"><table><thead><tr><th>Företag</th><th>Roll</th><th>Ort</th><th>Kontakt</th><th>Produkter</th><th>Registrerad</th><th>Status</th><th></th></tr></thead><tbody>
@@ -518,8 +536,12 @@ async function vAdmin(el) {
   <td style="white-space:nowrap">${o.status !== 'verifierad' ? `<button class="btn2" data-st="${o.id}|verifierad">Verifiera</button> ` : ''}${o.status !== 'avstangd' && o.id !== S.org.id ? `<button class="lnk" data-st="${o.id}|avstangd">Stäng av</button>` : ''}${o.status === 'avstangd' ? `<button class="lnk" data-st="${o.id}|ny">Återaktivera</button>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="8" class="sub">Inga företag.</td></tr>'}
   </tbody></table></div></div>
   <div class="card"><h2>Senaste förfrågningar</h2><div class="scroll"><table><thead><tr><th>Datum</th><th>Köpare</th><th>Ort</th><th>Rader</th><th class="num">Svar</th><th>Status</th></tr></thead><tbody>
-  ${live.sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 50).map(r => { const ls = (L || []).filter(l => l.request_id === r.id && !l.removed); const na = (A || []).filter(a => ls.some(l => l.id === a.line_id)).length; const ch = ls.filter(l => l.chosen_org_id).length; return `<tr><td>${day(r.created_at)}</td><td>${esc(O.find(o => o.id === r.buyer_org_id)?.name || '')}</td><td>${esc(r.city)}</td><td class="sub">${ls.map(l => esc(l.product) + ' ' + fmt(l.qty) + ' ' + U(l)).join('<br>')}</td><td class="num">${na}</td><td>${ch ? `<span class="tag acc">${ch} vald</span>` : '<span class="tag">Öppen</span>'}</td></tr>`; }).join('') || '<tr><td colspan="6" class="sub">Inga förfrågningar än.</td></tr>'}
+  ${live.sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 50).map(r => { const ls = (L || []).filter(l => l.request_id === r.id && !l.removed); const na = (A || []).filter(a => ls.some(l => l.id === a.line_id)).length; const ch = ls.filter(l => l.chosen_org_id).length; return `<tr><td>${day(r.created_at)}</td><td>${esc(O.find(o => o.id === r.buyer_org_id)?.name || '')}</td><td>${esc(r.city)}</td><td class="sub">${ls.map(l => esc(l.product) + ' ' + fmt(l.qty) + ' ' + U(l)).join('<br>')}</td><td class="num">${na}</td><td>${r.review === 'granskas' ? '<span class="tag dev">Granskas</span>' : r.review === 'avbojd' ? `<span class="tag dev">Avböjd</span>${r.review_reason ? '<div class="sub">' + esc(r.review_reason) + '</div>' : ''}<div><button class="lnk" data-rv="${r.id}|godkand">Godkänn ändå</button></div>` : ch ? `<span class="tag acc">${ch} vald</span>` : '<span class="tag">Öppen</span>'}</td></tr>`; }).join('') || '<tr><td colspan="6" class="sub">Inga förfrågningar än.</td></tr>'}
   </tbody></table></div></div>`;
   $('af').onchange = e => { S.adminFilter = e.target.value; render(); };
+  el.querySelectorAll('[data-rv]').forEach(b => b.onclick = async () => { const [id, st] = b.dataset.rv.split('|'); let reason = null;
+    if (st === 'avbojd') { reason = prompt('Avböja förfrågan? Den går inte ut till fabrikerna och köparen får inget besked. Skäl (för er egen del, valfritt):', ''); if (reason === null) return; }
+    const { error } = await sb.from('requests').update({ review: st, review_reason: reason || null }).eq('id', id); if (error) return flash(errText(error)); flash(st === 'godkand' ? 'Förfrågan är godkänd och syns nu för fabrikerna.' : 'Förfrågan är avböjd.'); });
+  el.querySelectorAll('[data-rfix]').forEach(b => b.onclick = () => { const r = live.find(x => x.id === b.dataset.rfix); S.editReq = { ...r, _admin: true }; go('ny', true); });
   el.querySelectorAll('[data-st]').forEach(b => b.onclick = async () => { const [id, st] = b.dataset.st.split('|'); if (st === 'avstangd' && !confirm('Stänga av företaget? De kan logga in men inte se eller skicka förfrågningar.')) return; const { error } = await sb.from('organizations').update({ status: st }).eq('id', id); if (error) return flash(errText(error)); render(); });
 }
