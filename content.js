@@ -18,7 +18,7 @@ export const LANDING = `
     <div class="pane">
       <p class="kick">Snabb leverans</p>
       <h3 class="h3">Behöver du snabb leverans?</h3>
-      <p>Då gäller det att hitta en fabrik som har plats i produktionen. Redan när ni fyller i förfrågan ser ni hur många fabriker som har lagt in ledig kapacitet under perioden. Fabrikerna svarar med vilka veckor de kan leverera och väggar och bjälklag kan komma från olika fabriker.</p>
+      <p>Då behöver ni en fabrik med plats i produktionen. Redan i förfrågan ser ni hur många fabriker som har lagt in ledig kapacitet under perioden. Fabrikerna svarar med de veckor de kan leverera. Väggar och bjälklag kan komma från olika fabriker.</p>
       <button class="btn" data-reg="kopare">Hitta ledig kapacitet</button>
     </div>
     <div class="pane">
@@ -62,8 +62,8 @@ export const LANDING = `
   <div>
     <div style="max-width:760px">
       <h2 class="h2">Det som skiljer fabrikerna åt</h2>
-      <p>Fabriker skiljer sig i när de kan leverera, i kvalitet, i avstånd till projektet och i klimatavtryck. Slotcast visar det som går att mäta i varje svar: leveransveckor, km till projektet, CO2 för element och transport, klimatnivå och EPD. Kvaliteten bedömer ni som i dag, när ni har valt fabrik och får fast offert.</p>
-      <p>Transporten är en stor del av priset. För en massiv vägg kan den vara ungefär 6 % av priset inom 3 mil och 16 % på 30 mil, så närmaste fabrik som klarar kraven blir ofta billigast.</p>
+      <p>Fabrikerna skiljer sig i när de har plats i produktionen, i avstånd till projektet, i klimatavtryck och i kvalitet. I varje svar ser ni det som går att mäta: leveransveckor, avstånd till projektet, CO2 för element och transport, klimatnivå och EPD. Kvaliteten bedömer ni som i dag, när ni har valt fabrik och fått fast offert.</p>
+      <p>Avståndet märks i både pris och utsläpp. Samma betong från en fabrik nära projektet ger kortare transporter, lägre utsläpp och oftast lägre pris.</p>
     </div>
   </div>
 </section>
