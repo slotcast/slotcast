@@ -59,15 +59,11 @@ export const LANDING = `
 </section>
 
 <section class="wrap blk">
-  <div class="two">
-    <div>
+  <div>
+    <div style="max-width:760px">
       <h2 class="h2">Det som skiljer fabrikerna åt</h2>
       <p>Fabriker skiljer sig i när de kan leverera, i kvalitet, i avstånd till projektet och i klimatavtryck. Slotcast visar det som går att mäta i varje svar: leveransveckor, km till projektet, CO2 för element och transport, klimatnivå och EPD. Kvaliteten bedömer ni som i dag, när ni har valt fabrik och får fast offert.</p>
-      <p>Transporten är en stor del av priset. För en massiv vägg kan den vara ungefär 6 % av priset inom 3 mil och 16 % på 30 mil, så närmaste fabrik som klarar kraven blir ofta billigast. Siffrorna bygger på Prebetongs transportpriser från 2020, som är över sex år gamla och visar en möjlig nivå.</p>
-    </div>
-    <div class="nums">
-      <div><b>189</b><span>företag i Sverige tillverkar betongvaror för byggindustrin, 56 av dem med minst 10 anställda (SCB, 2025)</span></div>
-      <div><b>18,4 mdr kr</b><span>i omsättning i branschen 2024 (SCB)</span></div>
+      <p>Transporten är en stor del av priset. För en massiv vägg kan den vara ungefär 6 % av priset inom 3 mil och 16 % på 30 mil, så närmaste fabrik som klarar kraven blir ofta billigast.</p>
     </div>
   </div>
 </section>
@@ -90,22 +86,6 @@ export const LANDING = `
         <li><b>Utan EPD</b> används Boverkets generiska värde, märkt "generiskt". Det är typvärdet plus 25 %, så en egen EPD lönar sig. <a href="#vagledning">Så får ni en EPD.</a></li>
       </ol>
       <p class="sub">Klimatnivåerna följer Svensk Betongs vägledning för klimatförbättrad betong: nivå 1–4 är 10–40 % lägre klimatpåverkan än typvärdet, nivå 5 är halverad och nivå 6 är 60 % lägre. Slotcast räknar fram nivån ur fabrikens EPD.</p>
-    </div>
-  </div>
-</section>
-
-<section class="wrap blk">
-  <div class="two">
-    <div>
-      <p class="kick">Varför Slotcast</p>
-      <h2 class="h2">Byggt av någon som har drivit en prefabfabrik</h2>
-      <p>I min fabrik, Prebetong i Motala, varierade produktionen mellan 158 och 738 m² i veckan med samma personal. Projekt sköts fram eller krympte och luckorna kom utan förvarning. Samtidigt ringde köpare runt för att hitta någon med ledig tid. Slotcast kopplar ihop de två.</p>
-      <p><b>Filip Björnstjerna, grundare</b></p>
-    </div>
-    <div class="nums">
-      <div><b>158–738</b><span>m² gjutet per vecka i samma fabrik</span></div>
-      <div><b>26–35 %</b><span>av försäljningen gick till andra fabriker</span></div>
-      <div><b>80 av 301</b><span>offerter gällde under 200 m²</span></div>
     </div>
   </div>
 </section>

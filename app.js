@@ -86,7 +86,7 @@ const area = (l, q) => l.unit === 'lm' ? q * hM(l) : q;
 const tons = (l, q) => { if (l.product === 'Trappa') return Math.ceil(q / STAIRS_PER_LOAD) * LOAD_TON; const a = area(l, q), arm = +l.arm || 0; const mm = LAYERED.includes(l.product) ? ((+l.t1||0) + (+l.t3||0)) || MM[l.product] : (+l.concrete_mm || MM[l.product] || 200); return a * mm / 1000 * (arm ? 2.3 : 2.4) + a * arm / 1000; };
 const perTon = (o, d) => { const a = +o.t30 || 120, b = +o.t300 || 342; return d <= 30 ? a : a + (d - 30) * (b - a) / 270; };
 function transport(org, l, q, city, road) { const d = road || km(CITIES[org.city], CITIES[city]); if (d == null) return null; const t = tons(l, q); return { km: d, ton: t, kr: Math.round(t * perTon(org, d) / 100) * 100 }; }
-const trInfo = (o, l, t) => (l.product === 'Trappa' ? `Grått exempel: ${fmt(t.ton / LOAD_TON)} lass à cirka ${STAIRS_PER_LOAD} trappor, ${fmt(LOAD_TON * perTon({}, t.km))} kr per lass (${fmt(t.km)} km)` : `Grått exempel: ${fmt(t.ton)} ton × ${fmt(perTon({}, t.km))} kr/ton (${fmt(t.km)} km)`) + ', Prebetongs taxa 2020. Över sex år gammal, så ange er egen kostnad.';
+const trInfo = (o, l, t) => (l.product === 'Trappa' ? `Grått exempel: ${fmt(t.ton / LOAD_TON)} lass à cirka ${STAIRS_PER_LOAD} trappor, ${fmt(LOAD_TON * perTon({}, t.km))} kr per lass (${fmt(t.km)} km)` : `Grått exempel: ${fmt(t.ton)} ton × ${fmt(perTon({}, t.km))} kr/ton (${fmt(t.km)} km)`) + ', exempeltaxa från 2020. Över sex år gammal, så ange er egen kostnad.';
 const upd = r => [r.edited_at, ...(r.request_lines || []).filter(l => !l.removed).map(l => l.edited_at)].filter(Boolean).sort().pop() || null;
 const isFactory = o => o && (o.role === 'fabrik' || o.role === 'bada');
 const isBuyer = o => o && (o.role === 'kopare' || o.role === 'bada');
