@@ -24,7 +24,7 @@ export const LANDING = `
     <div class="pane">
       <p class="kick">Traditionell offert</p>
       <h3 class="h3">Har ni tid att jämföra?</h3>
-      <p>Då handlar det om pris och därmed om närhet till projektet. Förfrågan går till alla fabriker som tillverkar produkten. Svaren visas med pris levererat, km, CO2 för element och transport, klimatnivå och EPD. Lägst pris levererat syns först, och det är oftast närmaste fabrik som klarar kraven. Vid samma pris vinner lägst klimatpåverkan.</p>
+      <p>Då kan ni jämföra mer än priset. Förfrågan går till alla fabriker som tillverkar produkten. Varje svar visar avstånd till projektet, CO2 för element och transport, klimatnivå och EPD bredvid pris levererat. En fabrik nära projektet ger kortare transporter och lägre utsläpp och ofta också lägre pris. Ni väljer den som passar projektet bäst.</p>
       <button class="btn" data-reg="kopare">Begär offert</button>
     </div>
   </div>
