@@ -233,7 +233,7 @@ async function vProfile(el) {
   <label>Roll</label><div>${Object.entries(ROLES).map(([k, t]) => `<label class="chk"><input type="radio" name="role" value="${k}" ${o.role === k ? 'checked' : ''}>${t}</label>`).join('')}</div>
   <div class="row" style="margin-top:10px"><div><label for="co">Företag</label><input id="co" value="${esc(o.name)}"></div><div><label for="ct">Kontaktperson</label><input id="ct" value="${esc(o.contact_name)}"></div></div>
   <div class="row" style="margin-top:10px"><div><label for="ph">Telefon</label><input id="ph" value="${esc(o.phone)}"></div><div><label for="em">E-post för kontakt</label><input id="em" type="email" value="${esc(o.email)}"></div><div><label for="cy">Ort</label><select id="cy">${cityOpts(o.city, true)}</select></div></div>
-  <div class="row" style="margin-top:10px"><div><label for="adr">Fabrikens adress (gata, ort), för vägavstånd</label><input id="adr" value="${esc(o.address || '')}" placeholder="t.ex. Industrigatan 4, Motala"><div class="sub">${o.lat ? 'Hittad på kartan' : o.address ? 'Inte hittad på kartan än; avstånd räknas från orten' : 'Utan adress räknas avståndet från orten'}</div></div></div>
+  <div class="row" style="margin-top:10px"><div><label for="adr" id="adrl">Adress</label><input id="adr" value="${esc(o.address || '')}" placeholder="Gata, ort"><div class="sub" id="adrs">${o.lat ? 'Hittad på kartan' : o.address ? 'Inte hittad på kartan än; avstånd räknas från orten' : 'Utan adress räknas avståndet från orten'}</div></div></div>
   <div id="fx2" class="line"><h3>Fabrik</h3><label style="margin-top:8px">Produkter ni tillverkar</label>
   <div>${PRODUCTS.map(x => `<label class="chk"><input type="checkbox" class="pr" value="${esc(x)}" ${(o.products || []).includes(x) ? 'checked' : ''}>${esc(x)}</label>`).join('')}</div>
   <h3 style="margin-top:16px">Certifiering</h3>
@@ -248,7 +248,7 @@ async function vProfile(el) {
   <div style="display:none"><input id="t30" type="number" value="${esc(o.t30)}"><input id="t300" type="number" value="${esc(o.t300)}"></div></div>
   <div id="perr" class="err"></div><p><button class="btn" id="psave">Spara profil</button></p></div>
   <div class="card"><h3>Lösenord</h3><div class="row" style="margin-top:8px"><div><label for="np2">Nytt lösenord</label><input id="np2" type="password" autocomplete="new-password"></div></div><div id="pwerr" class="err"></div><p><button class="btn2" id="pwsave">Byt lösenord</button></p></div>`;
-  const tog = () => { const r = el.querySelector('input[name=role]:checked').value; $('fx2').style.display = r !== 'kopare' ? '' : 'none'; };
+  const tog = () => { const r = el.querySelector('input[name=role]:checked').value; $('fx2').style.display = r !== 'kopare' ? '' : 'none'; $('adrl').textContent = r !== 'kopare' ? 'Fabrikens adress (gata, ort), för vägavstånd' : 'Adress'; $('adrs').style.display = r !== 'kopare' ? '' : 'none'; };
   el.querySelectorAll('input[name=role]').forEach(r => r.onchange = tog); tog();
   const showLvl = r => { const v = +String(r.querySelector('.gv').value).replace(',', '.'), lv = calcLvl(r.dataset.p, v, r.querySelector('.gu').value); r.querySelector('.cl').innerHTML = lv == null ? '<span class="sub">Generiskt</span>' : `<b>${esc(lvlTxt(lv))}</b>`; };
   el.querySelectorAll('.gw').forEach(r => { showLvl(r); r.querySelector('.gv').oninput = () => showLvl(r); r.querySelector('.gu').onchange = () => showLvl(r); });

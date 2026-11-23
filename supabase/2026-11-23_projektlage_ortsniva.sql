@@ -1,0 +1,2 @@
+-- factory_inbox: projektets läge avrundas till 0,1 grad (ortsnivå) tills köparen valt fabriken.
+-- Körd i Supabase 2026-11-23 (migration inbox_project_location_city_level). Se funktionen i databasen för hela texten.
