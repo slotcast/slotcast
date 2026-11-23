@@ -30,7 +30,6 @@ const MJ_PER_TONKM = 1;
 const trCO2 = (kmv, ton, v) => kmv ? Math.round(kmv * ton * MJ_PER_TONKM * (VEH[v] || VEH.diesel).f / 100) / 10 : null;
 const vehOpt = (k, sel) => `<option value="${k}" ${(sel || 'diesel') === k ? 'selected' : ''}>${VEH[k].s || VEH[k].t}</option>`;
 const vehOpts = sel => vehOpt('diesel', sel) + `<optgroup label="Fossilfri transport">${['hvo', 'biogas', 'el'].map(k => vehOpt(k, sel)).join('')}</optgroup>`;
-const KIND = { snabb: 'Snabb leverans', offert: 'Traditionell offert' };
 // Karttjänst (OpenRouteService) via Supabase-funktionen "karta"; utan svar används fågelvägen gånger 1,3
 const kmCache = {};
 async function geocode(text) { if (!text) return null; try { const { data } = await sb.functions.invoke('karta', { body: { action: 'geocode', text } }); return data?.found ? data : null; } catch { return null; } }
@@ -209,7 +208,7 @@ function vRecovery() {
 function views() {
   const o = S.org, v = [];
   if (isBuyer(o)) { v.push(['ny', 'Ny förfrågan']); v.push(['mina', 'Mina förfrågningar']); }
-  if (isFactory(o)) { v.push(['inkorg', 'Förfrågningar']); v.push(['kapacitet', 'Ledig kapacitet']); }
+  if (isFactory(o)) { v.push(['inkorg', 'Förfrågningar']); }
   v.push(['profil', 'Företagsprofil']);
   if (S.profile?.is_admin) v.push(['admin', 'Admin']);
   if (S.profile?.is_admin && S.editReq?._admin && !v.some(x => x[0] === 'ny')) v.push(['ny', 'Rätta förfrågan']);
@@ -239,7 +238,7 @@ function render() {
   if (S.flash) top += `<div class="banner"><span>${esc(S.flash)}</span><button class="lnk" id="fx">Stäng</button></div>`;
   app.innerHTML = top + '<div id="v"><div class="card">Laddar…</div></div>';
   if ($('fx')) $('fx').onclick = () => { S.flash = ''; render(); };
-  const V = { ny: vNew, mina: vMine, inkorg: vInbox, kapacitet: vCap, profil: vProfile, admin: vAdmin }[S.view];
+  const V = { ny: vNew, mina: vMine, inkorg: vInbox, profil: vProfile, admin: vAdmin }[S.view];
   V($('v')).catch(e => { $('v').innerHTML = `<div class="card err">Något gick fel: ${esc(errText(e))}</div>`; });
 }
 
@@ -287,31 +286,6 @@ async function vProfile(el) {
   $('pwsave').onclick = async () => { const p = $('np2').value, e = $('pwerr'); if (p.length < 8) { e.textContent = 'Minst 8 tecken.'; return; } const { error } = await sb.auth.updateUser({ password: p }); e.className = error ? 'err' : 'ok'; e.textContent = error ? errText(error) : 'Lösenordet är bytt.'; };
 }
 
-// ---------- Fabrik: ledig kapacitet ----------
-async function vCap(el) {
-  const { data: slots, error } = await sb.from('slots').select('*').eq('org_id', S.org.id).order('from_week');
-  if (error) throw error;
-  const prods = S.org.products || [];
-  el.innerHTML = `<h1>Ledig kapacitet</h1>
-  <div class="card"><p class="sub" style="margin-top:0">Lägg in perioder där ni har plats i produktionen, i m² per vecka. Vilken produkt det blir avgör köparens förfrågan, bland de produkter ni tillverkar${prods.length ? ' (' + esc(prods.join(', ').toLowerCase()) + ')' : ''}. Köpare ser att det finns ledig kapacitet, men inte vilken fabrik det gäller.</p>
-  <div class="row"><div><label for="sf">Från vecka</label><select id="sf">${weekOpts(WEEKS[4])}</select></div><div><label for="st">Till vecka</label><select id="st">${weekOpts(WEEKS[8])}</select></div>
-  <div><label for="sm">m² per vecka</label><input id="sm" type="number" min="1"></div></div>
-  <div style="margin-top:10px"><label for="sn">Kommentar (valfri)</label><input id="sn" placeholder="t.ex. bara socklar upp till 1,6 m"></div>
-  <div id="serr" class="err"></div><p><button class="btn" id="sadd">Lägg till</button></p></div>
-  <div class="card"><h2>Inlagd kapacitet</h2>${slots.length ? `<div class="scroll"><table><thead><tr><th>Veckor</th><th class="num">m²/vecka</th><th>Kommentar</th><th></th></tr></thead><tbody>
-  ${slots.map(s => `<tr${s.to_week < NOW ? ' style="opacity:.5"' : ''}><td>${wl(s.from_week)}–${wl(s.to_week)}${s.to_week < NOW ? ' <span class="tag">passerad</span>' : ''}</td><td class="num">${fmt(s.m2_per_week)}</td><td>${esc(s.note)}</td><td><button class="lnk" data-del="${s.id}">Ta bort</button></td></tr>`).join('')}
-  </tbody></table></div>` : '<p class="sub">Ingen kapacitet inlagd än.</p>'}</div>`;
-  $('sadd').onclick = async () => {
-    const d = { org_id: S.org.id, product: null, from_week: +val('sf'), to_week: +val('st'), m2_per_week: +val('sm'), note: val('sn') || null };
-    if (d.to_week < d.from_week) { $('serr').textContent = 'Till-veckan kan inte vara före från-veckan.'; return; }
-    if (!(d.m2_per_week > 0)) { $('serr').textContent = 'Ange hur många m² per vecka ni har ledigt.'; return; }
-    const { error } = await sb.from('slots').insert(d);
-    if (error) { $('serr').textContent = errText(error); return; }
-    flash('Kapaciteten är inlagd.');
-  };
-  el.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { if (!confirm('Ta bort den lediga kapaciteten?')) return; const { error } = await sb.from('slots').delete().eq('id', b.dataset.del); if (error) return flash(errText(error)); render(); });
-}
-
 // ---------- Volymkontroll ----------
 // Under 100 m² eller över 4 000 m² på någon produktrad: förfrågan väntar på granskning innan fabrikerna ser den.
 // Databasen sätter flaggan; här ber vi bara funktionen "granskning" mejla admin. Köparen får inget besked.
@@ -325,8 +299,7 @@ const REVIEW = { ok: '', granskas: 'Granskas', godkand: 'Godkänd', avbojd: 'Avb
 async function vNew(el) {
   const R0 = S.editReq || null;
   el.innerHTML = `<h1>${R0 ? (R0._admin ? 'Rätta förfrågan' : 'Ändra förfrågan') : 'Ny förfrågan'}</h1><div class="card">${R0?._admin ? '<div class="note"><b>Admin:</b> ni rättar köparens förfrågan. Den publiceras inte förrän ni godkänner den under Admin. Köparen får inget besked.</div>' : ''}${R0 && !R0._admin ? '<div class="note">Fabriker som redan har svarat ser att förfrågan är uppdaterad och ombeds kontrollera sitt svar. Rader där ni har valt fabrik är låsta.</div>' : ''}
-  <p class="sub" style="margin-top:0">En grov uppskattning räcker. Förfrågan går anonymt till fabriker som tillverkar produkterna. De svarar med ungefärligt pris, leveransveckor, transport och klimatnivå. När ni valt fabrik ser ni varandras namn och fabriken lämnar fast offert.</p>
-  <div class="row" style="margin-bottom:6px"><div><label for="kind">Vad behöver ni?</label><select id="kind"><option value="snabb" ${R0?.kind === 'snabb' ? 'selected' : ''}>Snabb leverans: fabriker med ledig kapacitet</option><option value="offert" ${!R0 || R0.kind !== 'snabb' ? 'selected' : ''}>Traditionell offert: pris och närhet</option></select></div></div>
+  <p class="sub" style="margin-top:0">En grov uppskattning räcker. Förfrågan går anonymt till fabriker nära projektet som tillverkar produkterna. De svarar inom sju dagar med ungefärligt pris, leveransveckor, transport och klimatnivå. När ni valt fabrik ser ni varandras namn och fabriken lämnar fast offert.</p>
   <div id="lines"></div><button class="lnk" id="addl">+ Lägg till produktrad</button>
   <div class="row" style="margin-top:12px"><div><label for="addr">Projektets adress</label><input id="addr" placeholder="Gata, ort"></div><div><label for="dc">Närmaste ort i listan (för avstånd)</label><select id="dc">${cityOpts(S.org.city && CITIES[S.org.city] && !S.org.city.includes('(') ? S.org.city : '', false)}</select></div></div>
   <div class="row" style="margin-top:12px"><div><label for="w1">Första leverans</label><select id="w1">${weekOpts(WEEKS[8])}</select></div><div><label for="w2">Sista leveransvecka</label><select id="w2">${weekOpts(WEEKS[10])}</select></div>
@@ -337,7 +310,6 @@ async function vNew(el) {
   <div id="nerr" class="err"></div><p><button class="btn" id="send">${R0 ? 'Spara ändringar' : 'Skicka förfrågan'}</button>${R0 ? ' <button class="lnk" id="cancel">Avbryt</button>' : ''}</p></div>`;
   const removedIds = [];
   const lines = $('lines');
-  const hint = async () => { const w1 = +val('w1'), w2 = +val('w2'); for (const d of lines.querySelectorAll('.ln')) { const p = d.querySelector('.lp').value; const { data } = await sb.rpc('capacity_summary', { p, w1, w2 }); const r = data?.[0] || { factories: 0, with_capacity: 0 }; const h = d.querySelector('.hint'); h.className = 'hint' + (r.with_capacity ? '' : ' no'); h.textContent = r.factories ? `${r.factories} fabrik(er) tillverkar ${p.toLowerCase()}; ${r.with_capacity} har lagt in ledig kapacitet under perioden.` : `Ingen fabrik i Slotcast tillverkar ${p.toLowerCase()} ännu.`; } };
   const kb = p => p === 'Balkong' ? `<div class="row"><div><label>Yta per balkong (m²)</label><input class="lba" type="number" min="0.5" step="0.1"></div><div><label>Antal balkonger</label><input class="lbn" type="number" min="1"></div><div><label>Plattjocklek (mm), för vikt</label><input class="lbt" type="number" min="50" value="220"></div></div>`
     : p === 'Trappa' ? `<div class="row"><div><label>Antal trappor</label><input class="ltn" type="number" min="1"></div><div><label>Höjd per trappa (mm)</label><input class="lth" type="number" min="500" step="10" placeholder="t.ex. 2800"></div><div><label>Kravställning (valfri)</label><input class="lk" placeholder="t.ex. rak, 1 200 mm bred"></div></div>`
     : LAYERED.includes(p) ? `<div class="row"><div><label>Innerskiva (mm)</label><input class="l1" type="number" min="1"></div><div><label>Isolering (mm)</label><input class="l2" type="number" min="0"></div><div><label>Ytterskiva (mm)</label><input class="l3" type="number" min="1"></div></div>`
@@ -348,13 +320,13 @@ async function vNew(el) {
     const d = document.createElement('div'); d.className = 'ln line'; const p0 = pre?.product || PRODUCTS[0]; if (pre) d.dataset.id = pre.id;
     d.innerHTML = `<div class="row"><div style="flex:0 1 220px"><label>Produkt</label><select class="lp">${PRODUCTS.map(x => `<option ${x === p0 ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></div><div class="kb" style="flex:1 1 360px">${kb(p0)}</div></div>
     <div class="row r2" style="margin-top:8px"><div style="flex:0 1 110px"><label>Enhet</label><select class="lu"><option value="m2">m²</option><option value="lm">lm</option></select></div><div><label>Mängd</label><input class="lm" type="number" min="1"></div><div><label>Elementhöjd (mm) <span class="sub lhr">valfri</span></label><input class="lh" type="number" min="100" step="10"></div><div><label>Antal element, cirka</label><input class="le" type="number" min="1"></div><div class="ltw"><label>Betong (mm), för vikt</label><input class="lt" type="number" min="20" value="${MM[p0]}"></div><div class="law"><label>Armering per kvm (kg)</label><input class="la" type="number" min="0" step="0.5"></div></div>
-    <div class="hint"></div>${(lines.querySelectorAll('.ln').length || pre) ? '<button class="lnk rm">Ta bort raden</button>' : ''}`;
+    ${(lines.querySelectorAll('.ln').length || pre) ? '<button class="lnk rm">Ta bort raden</button>' : ''}`;
     lines.appendChild(d);
     // Undertyp för plattbärlag styr betongtjockleken för vikten
     const exu = () => { const p = d.querySelector('.lp').value, ls = d.querySelector('.ls'); if (ls) ls.onchange = () => { d.querySelector('.lt').value = SUBMM[ls.value] || MM[p]; }; };
     const tog = p => { d.querySelector('.r2').style.display = SPECIAL.includes(p) ? 'none' : ''; d.querySelector('.ltw').style.display = LAYERED.includes(p) ? 'none' : ''; d.querySelector('.law').style.display = WALLS.includes(p) ? '' : 'none'; }; tog(p0);
     d.querySelector('.lu').onchange = e => { d.querySelector('.lhr').textContent = e.target.value === 'lm' ? 'krävs vid lm' : 'valfri'; };
-    d.querySelector('.lp').onchange = e => { const p = e.target.value; d.querySelector('.kb').innerHTML = kb(p); d.querySelector('.lt').value = SUBS[p] ? SUBMM[SUBS[p][0]] : MM[p]; tog(p); exu(); hint(); };
+    d.querySelector('.lp').onchange = e => { const p = e.target.value; d.querySelector('.kb').innerHTML = kb(p); d.querySelector('.lt').value = SUBS[p] ? SUBMM[SUBS[p][0]] : MM[p]; tog(p); exu(); };
     if (SUBS[p0] && !pre) d.querySelector('.lt').value = SUBMM[SUBS[p0][0]];
     d.querySelector('.rm')?.addEventListener('click', () => { if (lines.querySelectorAll('.ln').length < 2) return; if (d.dataset.id) removedIds.push(d.dataset.id); d.remove(); });
     // Kravställning i mm följer med till "Betong (mm), för vikt"
@@ -369,7 +341,7 @@ async function vNew(el) {
       else { set('.lk', (pre.spec || '').replace(/\s*mm$/, '')); set('.lt', pre.concrete_mm); }
       if (pre.unit === 'lm') q('.lhr').textContent = 'krävs vid lm';
     }
-    exu(); hint();
+    exu();
   };
   if (R0) {
     (R0.request_lines || []).filter(l => !l.removed).sort((a, b) => a.created_at.localeCompare(b.created_at)).forEach(add);
@@ -379,7 +351,7 @@ async function vNew(el) {
     $('all').value = R0.all_from_one ? '1' : '0'; if (R0.drawings) $('draw').value = R0.drawings;
     $('cancel').onclick = () => go(R0._admin ? 'admin' : 'mina');
   } else add();
-  $('addl').onclick = () => add(); $('w1').onchange = hint; $('w2').onchange = hint;
+  $('addl').onclick = () => add();
   $('send').onclick = async () => {
     const e = $('nerr'); e.textContent = '';
     const out = [...lines.querySelectorAll('.ln')].map(d => { const q = c => d.querySelector(c); const p = q('.lp').value; const n = { _id: d.dataset.id || null, product: p, unit: q('.lu').value, qty: +q('.lm').value, height_mm: +q('.lh').value || null, elements: +q('.le').value || null, arm: WALLS.includes(p) ? (+String(q('.la').value).replace(',', '.') || null) : null };
@@ -397,7 +369,7 @@ async function vNew(el) {
     if (+val('w2') < +val('w1')) { e.textContent = 'Sista leveransveckan kan inte vara före första leveransen.'; return; }
     $('send').disabled = true;
     const g = val('addr') && (!R0 || val('addr') !== (R0.addr || '') || !R0.lat) ? await geocode(val('addr')) : null;
-    const head = { kind: val('kind') || 'offert', ...(g || !val('addr') ? { lat: g?.lat ?? null, lng: g?.lng ?? null } : {}), addr: val('addr') || null, city: val('dc'), first_week: +val('w1'), last_week: +val('w2'), all_from_one: val('all') === '1', drawings: val('draw'), min_climate_level: +val('clim') || 0, epd_required: !!val('epdr') };
+    const head = { kind: 'offert', ...(g || !val('addr') ? { lat: g?.lat ?? null, lng: g?.lng ?? null } : {}), addr: val('addr') || null, city: val('dc'), first_week: +val('w1'), last_week: +val('w2'), all_from_one: val('all') === '1', drawings: val('draw'), min_climate_level: +val('clim') || 0, epd_required: !!val('epdr') };
     if (R0) {
       const fail = err => { $('send').disabled = false; e.textContent = errText(err); };
       const { error: h } = await sb.from('requests').update(head).eq('id', R0.id); if (h) return fail(h);
@@ -428,7 +400,7 @@ async function vMine(el) {
   let h = '<h1>Mina förfrågningar</h1>';
   for (const r of R) {
     h += `<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><h2>${esc(r.addr || r.city)}</h2><span class="sub">skickad ${day(r.created_at)}${upd(r) ? ` · <span class="tag dev">Uppdaterad ${day(upd(r))}</span>` : ''}</span></div>
-    <p class="sub"><b>${KIND[r.kind] || KIND.offert}</b> · leverans ${wl(r.first_week)}–${wl(r.last_week)} till ${esc(r.city)} · ${r.all_from_one ? 'allt från en fabrik' : 'delar ok'} · ritningar: ${esc((r.drawings || '').toLowerCase())}${r.min_climate_level ? ' · klimatkrav nivå ' + r.min_climate_level + ' eller bättre' : ''}${r.epd_required ? ' · EPD krävs' : ''}</p>`;
+    <p class="sub">leverans ${wl(r.first_week)}–${wl(r.last_week)} till ${esc(r.city)} · ${r.all_from_one ? 'allt från en fabrik' : 'delar ok'} · ritningar: ${esc((r.drawings || '').toLowerCase())}${r.min_climate_level ? ' · klimatkrav nivå ' + r.min_climate_level + ' eller bättre' : ''}${r.epd_required ? ' · EPD krävs' : ''}</p>`;
     for (const l of r.request_lines.filter(l => !l.removed).sort((a, b) => a.created_at.localeCompare(b.created_at))) {
       const ans = (A || []).filter(a => a.line_id === l.id), yes = ans.filter(a => a.status !== 'nej'), no = ans.length - yes.length;
       const rows = yes.map((a, i) => { const share = a.status === 'delvis' ? +a.qty : +l.qty; const hasT = a.transport != null; const tm2 = hasT ? a.transport / share : null; const del = +a.price + (tm2 || 0); const dev = []; if (a.status === 'delvis' && r.all_from_one) dev.push(Math.round(share / l.qty * 100) + ' % av mängden'); if (a.week_to > r.last_week) dev.push('sista leverans ' + wl(a.week_to)); if (r.min_climate_level && !((+a.climate_level || 0) >= r.min_climate_level)) dev.push('klimatnivå under krav'); if (r.epd_required && !a.has_epd) dev.push('EPD saknas'); const co2 = trCO2(a.km, tons(l, share), a.vehicle); const el = elCO2(a, l, share); const tot = el.t != null && co2 != null ? Math.round((el.t + co2) * 10) / 10 : null; return { a, i, dev, del, tm2, hasT, share, co2, el, tot }; }).sort((x, y) => (x.dev.length > 0) - (y.dev.length > 0) || (Math.round(x.del / 10) - Math.round(y.del / 10)) || ((x.tot ?? 1e9) - (y.tot ?? 1e9)) || ((+y.a.climate_level || 0) - (+x.a.climate_level || 0)) || (y.a.has_epd - x.a.has_epd) || (x.del - y.del));
@@ -468,11 +440,11 @@ async function vInbox(el) {
   const isOpen = x => !x.chosen_me && !x.chosen_other && (!ans(x.line_id) || isStale(ans(x.line_id), edited(x)));
   const open = X.filter(isOpen), rest = X.filter(x => !isOpen(x));
   let h = '<h1>Förfrågningar</h1>';
-  if (!X.length) { el.innerHTML = h + `<div class="card"><p>Inga förfrågningar på era produkter ännu (${esc((o.products || []).join(', ').toLowerCase())}).</p><p class="sub">Lägg gärna in ledig kapacitet.</p></div>`; return; }
+  if (!X.length) { el.innerHTML = h + `<div class="card"><p>Inga förfrågningar på era produkter ännu (${esc((o.products || []).join(', ').toLowerCase())}).</p><p class="sub">Förfrågningar inom ert närområde dyker upp här.</p></div>`; return; }
   const card = x => {
     const a = ans(x.line_id), l = x, tr = transport(o, l, l.qty, x.city, road[x.line_id]), stale = isStale(a, edited(x));
     let c = `<div class="card"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><h3>${lineText(l)}</h3><span class="sub">${x.chosen_me ? esc(x.buyer_name) : 'Anonym köpare'} · ${day(x.request_created_at)}${edited(x) ? ` · <span class="tag dev">Uppdaterad ${day(edited(x))}</span>` : ''}</span></div>
-    <p class="sub" style="margin:6px 0">${lineSub(l)} · leverans ${wl(x.first_week)}–${wl(x.last_week)} till ${esc(x.city)}${tr ? ` (cirka ${fmt(tr.km)} km från er${road[x.line_id] ? ', väg' : ''})` : ''} · <b>${KIND[x.kind] || KIND.offert}</b> · ${x.all_from_one ? 'allt från en fabrik' : 'delar ok'} · ritningar: ${esc((x.drawings || '').toLowerCase())}${x.min_climate_level ? ' · <b>klimatkrav nivå ' + x.min_climate_level + ' eller bättre</b>' : ''}${x.epd_required ? ' · <b>EPD krävs</b>' : ''}</p>
+    <p class="sub" style="margin:6px 0">${lineSub(l)} · leverans ${wl(x.first_week)}–${wl(x.last_week)} till ${esc(x.city)}${tr ? ` (cirka ${fmt(tr.km)} km från er${road[x.line_id] ? ', väg' : ''})` : ''} · ${!x.chosen_me && !x.chosen_other ? `<b>Svara senast ${day(x.answer_by)}</b> · ` : ''}${x.all_from_one ? 'allt från en fabrik' : 'delar ok'} · ritningar: ${esc((x.drawings || '').toLowerCase())}${x.min_climate_level ? ' · <b>klimatkrav nivå ' + x.min_climate_level + ' eller bättre</b>' : ''}${x.epd_required ? ' · <b>EPD krävs</b>' : ''}</p>
     ${stale ? '<div class="note"><b>Köparen har ändrat förfrågan efter ert svar.</b> Kontrollera och uppdatera svaret.</div>' : ''}`;
     if (x.chosen_me) {
       const of = a?.offers;

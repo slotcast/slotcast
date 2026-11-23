@@ -13,18 +13,13 @@ export const LANDING = `
 </div></section>
 
 <section class="wrap blk">
-  <h2 class="h2">Vad behöver ni?</h2>
+  <h2 class="h2">En förfrågan, många fabriker</h2>
   <div class="two">
     <div class="pane">
-      <p class="kick">Snabb leverans</p>
-      <h3 class="h3">Behöver du snabb leverans?</h3>
-      <p>Då gäller det att hitta en fabrik som har plats i produktionen. Redan när ni fyller i förfrågan ser ni hur många fabriker som har lagt in ledig kapacitet under perioden. Fabrikerna svarar med vilka veckor de kan leverera och väggar och bjälklag kan komma från olika fabriker.</p>
-      <button class="btn" data-reg="kopare">Hitta ledig kapacitet</button>
-    </div>
-    <div class="pane">
-      <p class="kick">Traditionell offert</p>
-      <h3 class="h3">Har ni tid att jämföra?</h3>
-      <p>Då handlar det om pris och därmed om närhet till projektet. Förfrågan går till alla fabriker som tillverkar produkten. Svaren visas med pris levererat, km, CO2 för element och transport, klimatnivå och EPD. Lägst pris levererat syns först, och det är oftast närmaste fabrik som klarar kraven. Vid samma pris vinner lägst klimatpåverkan.</p>
+      <p class="kick">Offert</p>
+      <h3 class="h3">Pris, närhet och klimat i samma jämförelse</h3>
+      <p>Förfrågan går anonymt till fabriker nära projektet som tillverkar produkten. Har en fabrik plats i produktionen svarar den. Är den fullbelagd svarar den inte, och då vidgas området stegvis till fler fabriker. Har ni bråttom är det därför ni snabbt når en fabrik som kan leverera.</p>
+      <p>Svaren visas med pris levererat, km, CO2 för element och transport, klimatnivå och EPD. Lägst pris levererat syns först, och det är oftast närmaste fabrik som klarar kraven. Vid samma pris vinner lägst klimatpåverkan.</p>
       <button class="btn" data-reg="kopare">Begär offert</button>
     </div>
   </div>
@@ -36,7 +31,7 @@ export const LANDING = `
     <h3 class="h3">Fyll luckorna i produktionen med köpare ni inte når i dag</h3>
     <ul>
       <li>Fler order från ert närområde: förfrågningar på de produkter ni tillverkar, från byggföretag, stålhallsbyggare och andra fabriker</li>
-      <li>Lägg in ledig kapacitet i m² och veckor; ingen produkt behövs, det avgör köparens förfrågan</li>
+      <li>Inget att uppdatera: ni får förfrågningar från projekt nära er och svarar när ni vill ha jobbet</li>
       <li>Ungefärligt svar först, fast offert när köparen har valt er</li>
       <li>Nästan ingen fabrik säljer på närhet i dag. Gör det med oss: köparen ser km och transportkostnad i varje svar</li>
       <li>Konkurrenter ser aldrig era svar eller priser</li>
@@ -123,7 +118,8 @@ export const LANDING = `
   <details><summary>Kostar det något?</summary><p>Köpare betalar ingenting. Fabriker är med gratis till augusti 2027 och betalar sedan ett abonnemang som följer hur mycket affärer fabriken gör. Ingen provision.</p></details>
   <details><summary>Hur exakta är priserna i första svaret?</summary><p>Ungefärliga, byggda på det köparen har angett. Fast pris lämnar fabriken på ritningarna när köparen har valt den.</p></details>
   <details><summary>Vem ser vad?</summary><p>Fabrikerna ser en anonym förfrågan. Köparen ser svaren utan fabrikernas namn. Konkurrerande fabriker ser aldrig varandras svar. Namn och kontaktuppgifter släpps när köparen väljer fabrik.</p></details>
-  <details><summary>Måste fabriken ange produkt för sin lediga kapacitet?</summary><p>Nej. Ledig kapacitet anges i m² och veckor. Om det blir sandwichvägg, massiv vägg eller sockel avgör köparens förfrågan, bland de produkter fabriken tillverkar.</p></details>
+  <details><summary>Behöver fabriken ange ledig kapacitet?</summary><p>Nej. Fabriken svarar på de förfrågningar den vill ha. Är den fullbelagd svarar den inte, och förfrågan går vidare till fabriker längre bort.</p></details>
+  <details><summary>Vilka fabriker får min förfrågan?</summary><p>Fabriker som tillverkar produkten och ligger nära projektet. Kommer det för få svar som uppfyller kraven vidgas området stegvis. Fabrikerna svarar inom sju dagar.</p></details>
   <details><summary>Hur snabbt kan elementen levereras?</summary><p>Det avgör fabriken. Fabriker behöver oftast tillverkningsritningar 6–8 veckor före produktion, så akuta förfrågningar fungerar bäst när ritningarna är klara.</p></details>
   <details><summary>Vem ansvarar för transporten?</summary><p>Köparen och fabriken, som i dag. Fabriken anger sin transportkostnad i svaret; lämnas den tom visas priset exklusive transport. Köparen ser km och transportens CO2 för varje svar.</p></details>
   <details><summary>Hur visas klimatpåverkan?</summary><p>Varje svar visar CO2 för element (ur fabrikens EPD, annars generiskt värde), transport och totalt, fabrikens klimatnivå och om den har EPD. Vid samma pris hamnar lägst CO2 totalt först. Köparen kan också ange lägsta klimatnivå och om EPD krävs; först då markeras svar som inte når kraven.</p></details>
@@ -150,7 +146,7 @@ export const POLICY = `
 <h2>Vilka uppgifter vi samlar in</h2>
 <ul>
 <li>Kontouppgifter: företagets namn, kontaktperson, telefon, e-post, ort, roll och vilka produkter fabriken tillverkar. Lösenordet sparas krypterat och kan inte läsas av oss.</li>
-<li>Uppgifter i tjänsten: förfrågningar (till exempel projektets adress, mängder och leveransveckor), fabrikernas svar och offerter, ledig kapacitet, transporttaxa och om det blev affär.</li>
+<li>Uppgifter i tjänsten: förfrågningar (till exempel projektets adress, mängder och leveransveckor), fabrikernas svar och offerter, transporttaxa och om det blev affär.</li>
 <li>Tekniska uppgifter: inloggningsuppgifter för att hålla dig inloggad samt loggar med IP-adress och tidpunkt, som våra leverantörer sparar för drift och säkerhet.</li>
 </ul>
 
