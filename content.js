@@ -180,6 +180,9 @@ export const POLICY = `
 <h2>Dina rättigheter</h2>
 <p>Du har rätt att få veta vilka uppgifter vi har om dig, att få fel rättade, att få uppgifter raderade, att begränsa eller invända mot behandlingen och att få ut dina uppgifter i ett läsbart format. Skriv till <a href="mailto:filip@bjornstjerna.se">filip@bjornstjerna.se</a>. Är du inte nöjd kan du klaga hos Integritetsskyddsmyndigheten, <a href="https://www.imy.se" target="_blank" rel="noopener">imy.se</a>.</p>
 
+<h2>Klimatuppgifter och beräkningar</h2>
+<p>Klimatnivå, CO2 för element och transport och vägledningen bygger på fabrikernas egna uppgifter, Svensk Betongs typvärden och Boverkets generiska värden. Slotcast har inte kontrollerat uppgifterna och ansvarar inte för dem eller för beslut som fattas utifrån dem. Varje fabrik ansvarar för att de uppgifter den lägger in, till exempel EPD-värde och ISO-certifiering, stämmer. Se <a href="#vagledning">vägledningen</a>.</p>
+
 <h2>Ändringar</h2>
 <p>Ändrar vi policyn meddelar vi det i tjänsten och via mejl om ändringen är väsentlig.</p>
 </div></div>
@@ -190,6 +193,7 @@ export const GUIDE = `
 <p><a href="#">← Tillbaka</a></p>
 <h1>Klimatdata för er fabrik – vägledning</h1>
 <p class="lead2">Ni behöver ingen EPD för att vara med i Slotcast. Men med en egen EPD syns er verkliga klimatpåverkan, som nästan alltid är lägre än det generiska värdet. Så här kommer ni igång, i tre steg.</p>
+<p class="sub">Vägledningen är allmän information. Slotcast ansvarar inte för siffrorna eller för hur ni tar fram er EPD; se friskrivningen längst ner.</p>
 
 <h2>Steg 1: Ni är med direkt, med generiskt värde</h2>
 <p>Lämnar ni klimatfälten tomma i profilen visar Slotcast Boverkets generiska värde för produkten. Det är typvärdet plus 25 %, alltså medvetet högt satt. Köparen ser "generiskt värde" i stället för en EPD. Ni förlorar inga förfrågningar på det: lägst pris levererat kommer först, och klimatet markeras bara när köparen själv har ställt krav.</p>
@@ -229,6 +233,11 @@ export const GUIDE = `
 
 <h2>Certifiering</h2>
 <p>Kryssa i profilen i om ni har ISO 9001 (kvalitet), ISO 14001 (miljö) eller ISO 45001 (arbetsmiljö). Det visas för köparen i era svar.</p>
+
+<h2>Friskrivning</h2>
+<p>Vägledningen är allmän information och ingen rådgivning. Typvärdena och de generiska värdena kommer från Svensk Betong och Boverket, och Slotcast har inte kontrollerat dem. Värdena per m² och klimatnivåerna är förenklade beräkningar och kan avvika från en verklig EPD.</p>
+<p>Slotcast ansvarar inte för siffrorna, för hur ni tar fram en EPD eller för beslut som fattas utifrån vägledningen. Varje fabrik ansvarar själv för de uppgifter den lägger in, och klimatnivån Slotcast räknar fram gäller bara om EPD-värdet stämmer.</p>
+<p>Kontrollera alltid aktuella värden i källorna och låt en EPD granskas av tredje part enligt EN 15804. För klimatdeklarationer gäller Boverkets regler.</p>
 
 <p class="sub">Källor: <a href="https://www.svenskbetong.se/component/sbdocs/ladda-ner/60/vagledning-klimatforbattrad-betong-utgava-2" target="_blank" rel="noopener">Svensk Betong, Vägledning klimatförbättrad betong, utgåva 2</a> · <a href="https://www.boverket.se/sv/klimatdeklaration/klimatdatabas/" target="_blank" rel="noopener">Boverkets klimatdatabas</a>. Frågor: <a href="mailto:filip@bjornstjerna.se">filip@bjornstjerna.se</a></p>
 </div></div>
