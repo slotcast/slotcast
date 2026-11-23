@@ -181,6 +181,22 @@ function vPolicy() {
   app.innerHTML = location.hash === '#vagledning' ? GUIDE : POLICY; window.scrollTo(0, 0);
 }
 
+// "Blev det affär?": sidan som mejlets knappar leder till. Ingen inloggning; köparen bekräftar med ett klick
+// (så att länkskannrar i e-post inte svarar åt köparen). Funktionen "affar" sparar svaret.
+function vAffar() {
+  if (!S.session) { $('nav').innerHTML = ''; $('who').innerHTML = ''; }
+  const q = new URLSearchParams(location.hash.slice(location.hash.indexOf('?') + 1)), t = q.get('t') || '', o = q.get('o') === 'ingen' ? 'ingen' : 'affar';
+  const done = txt => { app.innerHTML = `<div class="narrow"><div class="card"><h2>Tack</h2><p>${txt}</p><p><a href="#" id="ahome">Till Slotcast</a></p></div></div>`; $('ahome').onclick = e => { e.preventDefault(); location.hash = ''; render(); }; };
+  app.innerHTML = `<div class="narrow"><div class="card"><h2>Blev det affär?</h2><p>Bekräfta ert svar med ett klick. Vi frågar inget mer.</p>
+  <p><button class="btn${o === 'affar' ? '' : '2'}" data-a="affar">Ja, det blev affär</button> <button class="btn${o === 'ingen' ? '' : '2'}" data-a="ingen">Nej</button></p><div class="err" id="aerr"></div></div></div>`;
+  app.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
+    app.querySelectorAll('[data-a]').forEach(x => x.disabled = true);
+    const { data, error } = await sb.functions.invoke('affar', { body: { action: 'answer', t, o: b.dataset.a } });
+    if (error || !data?.ok) { $('aerr').textContent = 'Svaret kunde inte sparas. Länken kan vara för gammal; logga in och svara under Mina förfrågningar.'; app.querySelectorAll('[data-a]').forEach(x => x.disabled = false); return; }
+    done(data.already ? `Ni har redan svarat: <b>${data.already === 'affar' ? 'Affär' : 'Ingen affär'}</b>.` : 'Ert svar är sparat.');
+  });
+}
+
 function vRecovery() {
   $('nav').innerHTML = '';
   app.innerHTML = `<div class="narrow"><div class="card"><h2>Välj nytt lösenord</h2>
@@ -201,12 +217,13 @@ function views() {
 }
 function go(v, keep) { if (!keep) S.editReq = null; S.view = v; S.flash = ''; location.hash = v; render(); }
 
-window.addEventListener('hashchange', () => { if (location.hash === '#integritet' || location.hash === '#vagledning' || S.policy) render(); });
+window.addEventListener('hashchange', () => { if (location.hash === '#integritet' || location.hash === '#vagledning' || location.hash.startsWith('#affar') || S.policy) render(); });
 
 function render() {
   app.classList.remove('full');
   S.policy = location.hash === '#integritet' || location.hash === '#vagledning';
   if (S.policy) return vPolicy();
+  if (location.hash.startsWith('#affar?')) return vAffar();
   if (S.recovery) return vRecovery();
   if (!S.session) return vAuth();
   if (!S.profile || !S.org) { app.innerHTML = '<div class="card">Kontot saknar företagsprofil. Kontakta Slotcast.</div>'; return; }
@@ -424,8 +441,9 @@ async function vMine(el) {
         const f = org(l.chosen_org_id), a = ans.find(x => x.factory_org_id === l.chosen_org_id), of = a?.offers;
         h += `<div class="note"><b>Ni har valt ${esc(f.name || 'fabriken')}.</b> Kontakt: ${esc(f.contact_name || '')}${f.phone ? ', ' + esc(f.phone) : ''}${f.email ? ', ' + esc(f.email) : ''}. Skicka ritningar och underlag direkt till dem.${(() => { const g = (f.climate || {})[l.product] || {}; return g.reg || g.link ? ` EPD${g.reg ? ' ' + esc(g.reg) : ''}${g.link ? `: <a href="${esc(/^https?:\/\//.test(g.link) ? g.link : '#')}" target="_blank" rel="noopener">${esc(g.link)}</a>` : ''}` : ''; })()}</div>`;
         if (of) h += `<div class="card" style="background:#F7F8F6;margin:8px 0"><h3>Fast offert</h3><p>${fmt(of.price)} kr/${U(l)} LOK · transport ${fmt(of.transport)} kr (estimat) · giltig till ${esc(of.valid_until || '–')}${of.note ? '<br>Villkor: ' + esc(of.note) : ''}</p>
-          <p style="margin-bottom:0">${l.outcome ? `Ni har markerat: <b>${l.outcome === 'affar' ? 'Affär' : 'Ingen affär'}</b>.` : `Blev det affär? <button class="btn2" data-out="${l.id}|affar">Ja, affär</button> <button class="lnk" data-out="${l.id}|ingen">Nej</button>`}</p></div>`;
+</div>`;
         else h += '<p class="sub">Väntar på fast offert från fabriken.</p>';
+        h += `<p>${l.outcome ? `Ni har markerat: <b>${l.outcome === 'affar' ? 'Affär' : 'Ingen affär'}</b>.` : `Blev det affär? <button class="btn2" data-out="${l.id}|affar">Ja</button> <button class="lnk" data-out="${l.id}|ingen">Nej</button>`}</p>`;
       }
       h += '</div>';
     }
@@ -515,12 +533,13 @@ async function vAdmin(el) {
     sb.from('profiles').select('id,org_id,email,full_name,created_at'),
     sb.from('requests').select('*, request_lines(*)'),
     sb.from('answers').select('id,line_id,status'),
-    sb.from('request_lines').select('id,request_id,product,qty,unit,chosen_org_id,outcome,removed')
+    sb.from('request_lines').select('id,request_id,product,qty,unit,chosen_org_id,outcome,outcome_at,removed')
   ]);
   const f = S.adminFilter || 'alla';
   const list = O.filter(o => f === 'alla' || o.status === f);
   const nNew = O.filter(o => o.status === 'ny').length;
   const live = (R || []).filter(r => !r.deleted_at);
+  const deals30 = (L || []).filter(l => l.outcome === 'affar' && l.outcome_at && Date.now() - new Date(l.outcome_at) < 30 * 864e5).length;
   const waiting = live.filter(r => r.review === 'granskas').sort((a, b) => a.created_at.localeCompare(b.created_at));
   const nb = $('n-admin'); if (nb && waiting.length) { nb.textContent = waiting.length; nb.style.display = ''; }
   const rv = waiting.length ? `<div class="card" style="border-color:#f79009"><h2>Väntar på granskning (${waiting.length})</h2><p class="sub" style="margin-top:0">Förfrågningar med under ${fmt(REVIEW_MIN)} m² eller över ${fmt(REVIEW_MAX)} m² på någon rad. Fabrikerna ser dem inte förrän ni godkänner. Köparen får inget besked.</p>
@@ -529,7 +548,7 @@ async function vAdmin(el) {
   ${ls.map(l => `<div>${lineText(l)}${l.unit === 'lm' && lineM2(l) != null ? ' (' + fmt(lineM2(l)) + ' m²)' : ''} ${outside(l) ? `<span class="tag dev">${lineM2(l) < REVIEW_MIN ? 'Under ' + fmt(REVIEW_MIN) : 'Över ' + fmt(REVIEW_MAX)} m²</span>` : ''}</div>`).join('')}
   <p style="margin-top:8px"><button class="btn2" data-rv="${r.id}|godkand">Godkänn och publicera</button> <button class="btn2" data-rfix="${r.id}">Rätta</button> <button class="lnk" data-rv="${r.id}|avbojd">Avböj</button></p></div>`; }).join('')}</div>` : '';
   el.innerHTML = `<h1>Admin</h1>${rv}
-  <div class="card stat"><div><b>${O.length}</b>företag</div><div><b>${O.filter(isFactory).length}</b>fabriker</div><div><b>${O.filter(isBuyer).length}</b>köpare</div><div><b>${nNew}</b>att verifiera</div><div><b>${live.length}</b>förfrågningar</div><div><b>${(A || []).filter(a => a.status !== 'nej').length}</b>svar med pris</div><div><b>${(L || []).filter(l => l.chosen_org_id).length}</b>valda fabriker</div><div><b>${(L || []).filter(l => l.outcome === 'affar').length}</b>affärer</div></div>
+  <div class="card stat"><div><b>${O.length}</b>företag</div><div><b>${O.filter(isFactory).length}</b>fabriker</div><div><b>${O.filter(isBuyer).length}</b>köpare</div><div><b>${nNew}</b>att verifiera</div><div><b>${live.length}</b>förfrågningar</div><div><b>${(A || []).filter(a => a.status !== 'nej').length}</b>svar med pris</div><div><b>${(L || []).filter(l => l.chosen_org_id).length}</b>valda fabriker</div><div><b>${(L || []).filter(l => l.outcome === 'affar').length}</b>affärer</div><div><b>${deals30}</b>affärer senaste 30 dagarna (mål 2)</div></div>
   <div class="card"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px"><h2>Företag</h2><select id="af" style="width:auto">${['alla', 'ny', 'verifierad', 'avstangd'].map(k => `<option value="${k}" ${f === k ? 'selected' : ''}>${k === 'alla' ? 'Alla' : STATUS[k]}</option>`).join('')}</select></div>
   <div class="scroll"><table><thead><tr><th>Företag</th><th>Roll</th><th>Ort</th><th>Kontakt</th><th>Produkter</th><th>Registrerad</th><th>Status</th><th></th></tr></thead><tbody>
   ${list.map(o => { const users = (P || []).filter(p => p.org_id === o.id); return `<tr><td><b>${esc(o.name)}</b><div class="sub">${users.map(u => esc(u.email)).join(', ')}</div></td><td>${ROLES[o.role]}</td><td>${esc(o.city || '–')}</td><td>${esc(o.contact_name || '')}<div class="sub">${esc(o.phone || '')}</div></td><td class="sub">${esc((o.products || []).join(', '))}${Object.entries(o.climate || {}).some(([, g]) => g.v || g.reg) ? '<div><span class="tag ok">EPD: ' + esc(Object.entries(o.climate).filter(([, g]) => g.v || g.reg).map(([p]) => p).join(', ')) + '</span></div>' : ''}${(o.iso || []).length ? '<div><span class="tag">ISO ' + esc(o.iso.join(', ')) + '</span></div>' : ''}</td><td>${day(o.created_at)}</td><td><span class="tag ${o.status === 'verifierad' ? 'ok' : o.status === 'avstangd' ? 'dev' : ''}">${STATUS[o.status]}</span></td>
