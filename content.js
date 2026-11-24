@@ -19,7 +19,7 @@ export const LANDING = `
       <p class="kick">Offert</p>
       <h3 class="h3">Pris, närhet och klimat i samma jämförelse</h3>
       <p>Förfrågan går anonymt till fabriker nära projektet som tillverkar produkten. Har en fabrik plats i produktionen svarar den. Är den fullbelagd svarar den inte, och då vidgas området stegvis till fler fabriker. Har ni bråttom är det därför ni snabbt når en fabrik som kan leverera.</p>
-      <p>Svaren visas med pris levererat, km, CO2 för element och transport, klimatnivå och EPD. Lägst pris levererat syns först, och det är oftast närmaste fabrik som klarar kraven. Vid samma pris vinner lägst klimatpåverkan.</p>
+      <p>Svaren visas med pris levererat, km, CO2 för element och transport, klimatnivå och EPD. Lägst pris levererat syns först. Oavsett var fabriken ligger är det totalpriset som vinner, och närhet vinner oftast. Till det kommer CO2: vid samma pris vinner lägst klimatpåverkan.</p>
       <button class="btn" data-reg="kopare">Begär offert</button>
     </div>
   </div>
@@ -32,9 +32,9 @@ export const LANDING = `
     <ul>
       <li>Fler order från ert närområde: förfrågningar på de produkter ni tillverkar, från byggföretag, stålhallsbyggare och andra fabriker</li>
       <li>Inget att uppdatera: ni får förfrågningar från projekt nära er och svarar när ni vill ha jobbet</li>
-      <li>Ungefärligt svar först, fast offert när köparen har valt er</li>
+      <li>Riktpris först, fast offert när köparen har valt er. Ligger fasta offerten långt från riktpriset utan rimlig förklaring rankas ni lägre</li>
       <li>Nästan ingen fabrik säljer på närhet i dag. Gör det med oss: köparen ser km och transportkostnad i varje svar</li>
-      <li>Konkurrenter ser aldrig era svar eller priser</li>
+      <li>Konkurrenter ser aldrig era svar eller priser; bara köparen ser dem, som vid vanliga offertförfrågningar</li>
       <li>Ingen provision; affären gör ni direkt med köparen</li>
       <li>Har ni EPD, ISO-certifiering eller fossilfria transporter syns det i svaren. Har ni det inte är ni ändå med, och <a href="#vagledning">vägledningen</a> visar hur ni kommer igång</li>
     </ul>
@@ -43,11 +43,21 @@ export const LANDING = `
 </section>
 
 <section class="wrap blk">
+  <div style="max-width:760px">
+    <p class="kick">För fabriker</p>
+    <h2 class="h2">Behöver ni hjälp att hinna leverera?</h2>
+    <p>Alla fabriker hamnar någon gång i en situation där efterfrågan är större än produktionen. Det kan vara en stor order som ni gärna vill ha men inte riktigt har kapacitet för, och då vill ni lägga ut en del av den. Då brukar det bli telefonrunda: ni ringer kollegor, förklarar läget för var och en och hoppas att någon har plats.</p>
+    <p>Med Slotcast lägger ni ut den delen en gång och anonymt. Fabriker nära projektet som har luft i produktionen svarar med pris och leveransvecka. Ni väljer, och först då får ni veta vem det är.</p>
+    <p class="sub">Den köpande fabriken ansvarar för hela leveransen mot sin kund. Slotcast är endast kontaktförmedlare.</p>
+  </div>
+</section>
+
+<section class="wrap blk">
   <h2 class="h2">Så fungerar det, i två steg</h2>
-  <p class="lead2">Som branschen redan arbetar: först ett ungefärligt pris på en grov beskrivning, sedan fast pris på ritningarna. Bara snabbare och till fler fabriker.</p>
+  <p class="lead2">Som branschen redan arbetar: först ett riktpris på en grov beskrivning, sedan fast pris på ritningarna. Bara snabbare och till fler fabriker.</p>
   <div class="steps">
     <div><b>1</b><h3 class="h4">Köparen frågar</h3><p>Produkt med enkel kravställning, mängd i m² eller löpmeter, ungefärligt antal element, projektets adress, leveransveckor och klimatkrav om ni har.</p></div>
-    <div><b>2</b><h3 class="h4">Fabrikerna svarar</h3><p>Anonymt: kan helt, delvis eller nej, ungefärligt pris, transport och fordon, leveransveckor och klimatnivå.</p></div>
+    <div><b>2</b><h3 class="h4">Fabrikerna svarar</h3><p>Anonymt: kan helt, delvis eller nej, riktpris, transport och fordon, leveransveckor och klimatnivå.</p></div>
     <div><b>3</b><h3 class="h4">Köparen väljer</h3><p>Då släpps namn och kontaktuppgifter åt båda håll och ritningarna går till fabriken.</p></div>
     <div><b>4</b><h3 class="h4">Fast offert</h3><p>Fabriken räknar på ritningarna. Affären görs direkt mellan parterna.</p></div>
   </div>
@@ -88,17 +98,17 @@ export const LANDING = `
 <section class="cta"><div class="wrap cta-in">
   <div>
     <h2 class="h2">Gå med nu, så sparar du mer</h2>
-    <p>Alltid gratis för köpare. Gratis för fabriker till augusti 2027; ju tidigare er fabrik går med, desto fler gratis månader. Därefter ett abonnemang som följer hur mycket affärer fabriken gör. Ingen provision.</p>
+    <p>Alltid gratis för köpare. Gratis för fabriker till augusti 2027; ju tidigare er fabrik går med, desto fler gratis månader. Därefter ett abonnemang från cirka 3 500 kr i månaden, som stiger med hur mycket affärer fabriken gör. Ingen provision.</p>
   </div>
   <div class="cta-b"><button class="btn2" data-reg="kopare">Skapa konto som köpare</button><button class="btn3" data-reg="fabrik">Anslut er fabrik</button></div>
 </div></section>
 
 <section class="wrap blk faq">
   <h2 class="h2">Vanliga frågor</h2>
-  <details><summary>Kostar det något?</summary><p>Köpare betalar ingenting. Fabriker är med gratis till augusti 2027 och betalar sedan ett abonnemang som följer hur mycket affärer fabriken gör. Ingen provision.</p></details>
-  <details><summary>Hur exakta är priserna i första svaret?</summary><p>Ungefärliga, byggda på det köparen har angett. Fast pris lämnar fabriken på ritningarna när köparen har valt den.</p></details>
-  <details><summary>Vem ser vad?</summary><p>Fabrikerna ser en anonym förfrågan. Köparen ser svaren utan fabrikernas namn. Konkurrerande fabriker ser aldrig varandras svar. Namn och kontaktuppgifter släpps när köparen väljer fabrik.</p></details>
-  <details><summary>Behöver fabriken ange ledig kapacitet?</summary><p>Nej. Fabriken svarar på de förfrågningar den vill ha. Är den fullbelagd svarar den inte, och förfrågan går vidare till fabriker längre bort.</p></details>
+  <details><summary>Kostar det något?</summary><p>Köpare betalar ingenting. Fabriker är med gratis till augusti 2027 och betalar sedan ett abonnemang från cirka 3 500 kr i månaden, som stiger med hur mycket affärer fabriken gör. Ingen provision.</p></details>
+  <details><summary>Hur exakta är priserna i första svaret?</summary><p>Det är riktpriser, byggda på det köparen har angett. Fast pris lämnar fabriken på ritningarna när köparen har valt den. Ligger fasta offerten för långt från riktpriset utan rimliga förklaringar får fabriken sämre ranking.</p></details>
+  <details><summary>Vem ser vad?</summary><p>Fabrikerna ser en anonym förfrågan. Köparen ser svaren utan fabrikernas namn. Konkurrerande fabriker ser aldrig varandras svar, som vid vanliga offertförfrågningar. Namn och kontaktuppgifter släpps när köparen väljer fabrik.</p></details>
+  <details><summary>Behöver fabriken ange ledig kapacitet?</summary><p>Nej. I profilen anger fabriken sin ungefärliga kapacitet i m² per vecka, men inte när den har ledigt. Fabriken svarar på de förfrågningar den vill ha. Är den fullbelagd svarar den inte, och förfrågan går vidare till fabriker längre bort.</p></details>
   <details><summary>Vilka fabriker får min förfrågan?</summary><p>Fabriker som tillverkar produkten och ligger nära projektet. Kommer det för få svar som uppfyller kraven vidgas området stegvis. Fabrikerna svarar inom sju dagar.</p></details>
   <details><summary>Hur snabbt kan elementen levereras?</summary><p>Det avgör fabriken. Fabriker behöver oftast tillverkningsritningar 6–8 veckor före produktion, så akuta förfrågningar fungerar bäst när ritningarna är klara.</p></details>
   <details><summary>Vem ansvarar för transporten?</summary><p>Köparen och fabriken, som i dag. Fabriken anger sin transportkostnad i svaret; lämnas den tom visas priset exklusive transport. Köparen ser km och transportens CO2 för varje svar.</p></details>
@@ -139,7 +149,7 @@ export const POLICY = `
 </ul>
 
 <h2>Vem som ser uppgifterna</h2>
-<p>Fabriker ser förfrågningar utan köparens namn. Köpare ser svar utan fabrikens namn. När en köpare väljer en fabrik ser båda varandras namn och kontaktuppgifter och fabriken ser projektets adress. Konkurrerande fabriker ser aldrig varandras svar.</p>
+<p>Fabriker ser förfrågningar utan köparens namn. Köpare ser svar utan fabrikens namn. När en köpare väljer en fabrik ser båda varandras namn och kontaktuppgifter och fabriken ser projektets adress. Konkurrerande fabriker ser aldrig varandras svar, som vid vanliga offertförfrågningar.</p>
 <p>Vi säljer inga uppgifter. Vi använder följande leverantörer, som behandlar uppgifter för vår räkning enligt personuppgiftsbiträdesavtal:</p>
 <ul>
 <li>Supabase: databas och inloggning. Uppgifterna lagras i Stockholm (EU).</li>
